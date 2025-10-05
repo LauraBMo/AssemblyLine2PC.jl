@@ -1,0 +1,157 @@
+#+title: Myassemblyline
+
+* Init
+#+begin_src julia
+import AssemblyLine2PC as AL2
+using Graphs, MetaGraphsNext
+# using GraphPlot, Plots
+g = AL2.datatree()
+air = "AIRobot"
+ab = "AtomicBomb"
+airb = "AIRBomber"
+
+#+end_src
+* Build graph
+** Full hirichi tree
+#+begin_src julia
+using AssemblyLine2PC
+
+using Graphs, MetaGraphsNext
+
+dep_tree = MetaGraph(
+    Graph();  # initial empty graph
+    label_type=String,  # Item name + high
+    # How many are needed, How many Miners needs to get 1unity/second.
+    vertex_data_type=Tuple{Int,Float64},
+    edge_data_type=Float64,  # required production velocity of the target node.
+    graph_data="additivecolors",  # tag for the whole graph
+)
+
+
+using OrderedCollections
+out = LittleDict{String,Vector{Pair{String, Int}}}(
+    ["Materials", "Wire", "Liquid", "Gear", "Cable", "Plate", "Others"],
+    [Pair{String, Int}[] for _ in 1:7])
+out = Dict{String,Vector{Pair{String, Int}}}(
+    ["Materials", "Wire", "Liquid", "Gear", "Cable", "Plate", "Others"] .=>
+    fill(Pair{String, Int}[], 7))
+
+#+end_src
+** Build data graph(tree)
+*** Skeleton
+
+#+begin_src julia
+g = AL2.build_skeletontree()
+AL2.populate_vertexmetadata(g)
+
+air = "AIRobot"
+[last(g[n])*g[air, n] for n in outneighbor_labels(g, "AIRobot")]
+[last(g[n])*g[air, n] for n in outneighbor_labels(g, "AIRobot")] |> sum
+g[air]
+
+#+end_src
+*** Ploting
+#+begin_src julia
+g = datatree()
+
+using Graphs, MetaGraphsNext, Karnak
+
+# Example: Assuming 'g' is your MetaDiGraph
+@drawsvg begin
+    background("white")
+    sethue("black")
+    drawgraph(g,
+              layout = Buchheim(# Tree layout algorithm
+                                # Optional: adjust node sizes
+                                nodesize=[10.0 for i in 1:nv(g)]
+                                ),
+              vertexlabels = labels(g),  # Show item names
+              edgelabels = [g[e...] for e in edge_labels(g)],  # Show quantities on edges
+              edgestrokeweights = (n, s, d, f, t) -> g[s, d]  # Scale edge width by quantity
+              )
+end
+
+#+end_src
+
+#+begin_src julia
+using Graphs, MetaGraphsNext, Karnak
+
+function get_color_by_tier(tier_level)
+    colors = ["red", "blue", "green", "orange", "purple", "brown", "pink"]
+    return colors[mod1(tier_level, length(colors))]
+end
+
+# Create a layout function based on your tier system
+function tiered_layout(g)
+    # Group nodes by tier
+    tiers = Dict{Int, Vector{String}}()
+    for v in labels(g)
+        tier_level = tier(g, v)  # Your tier function
+        if !haskey(tiers, tier_level)
+            tiers[tier_level] = String[]
+        end
+        push!(tiers[tier_level], v)
+    end
+
+    # Calculate positions
+    positions = Point[]
+    max_tier = maximum(keys(tiers))
+
+    for tier_level in sort(collect(keys(tiers)))
+        nodes_in_tier = tiers[tier_level]
+        tier_width = length(nodes_in_tier)
+
+        # Arrange nodes horizontally in this tier
+        for (i, node) in enumerate(nodes_in_tier)
+            x = (i-1) * 300 / max(1, tier_width-1)  # Spread across width
+            y = (max_tier - tier_level) * 100  # Higher tiers at top
+            push!(positions, Point(x, y))
+        end
+    end
+
+    return positions
+end
+
+# Plot with your custom layout
+p = @png begin
+    background("white")
+    sethue("black")
+
+    drawgraph(g,
+        layout = tiered_layout(g),
+        vertexlabels = labels(g),
+        edgelabels = [g[e...] for e in edge_labels(g)],
+        vertexfillcolors = [get_color_by_tier(tier(g, v)) for v in labels(g)]
+    )
+end 8000 6000 "Graph.png"  # Adjust size as needed
+
+#+end_src
+
+#+begin_src julia
+
+# Create layout matrix based on tiers
+x = [rand() for _ in vertices(g)]  # Random x within tier
+y = [AL2.tier(g, v) for v in labels(g)]  # Y position based on tier
+
+p = gplot(g, x, y;
+          nodelabel = labels(g),
+          # edgelabel = [g[e...] for e in edge_labels(g)],
+          nodesize = 0.2,
+          linetype = "curve"
+          );
+saveplot(p, "Graph2.png")
+
+#+end_src
+*** Maximum theoretical Speed
+Given a limit of Miners 'top'; which is the theoretical speed limit of production for 'name'?
+
+#+begin_src julia
+AL2.speed(air, 350)
+
+#+end_src
+** By blocks in REPL with PrettyTables.jl
+#+begin_src julia
+viewg = AL2.ViewGraph(g)
+viewg(air)
+
+#+end_src
