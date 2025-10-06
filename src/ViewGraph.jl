@@ -12,6 +12,13 @@ end
 viewgraph(G) = ViewGraph(G)
 graph(VG::ViewGraph) = VG.G
 
+function max_speed_for_miners(G, item, miners::Real)
+    miners < 0 && throw(ArgumentError("number of miners must be non-negative, got $(miners)"))
+    required_raw = cost(G, item)
+    required_raw == 0 && return 0.0
+    return (5 * miners) / required_raw
+end
+
 function make_title(G, item, speed, I)
     end_item = item
     end_speed = speed
@@ -31,8 +38,11 @@ function make_title(G, item, speed, I)
     return end_item, end_speed, title
 end
 
-function (VG::ViewGraph)(item::String, speed=one(Int), I...)
+function (VG::ViewGraph)(item::String, speed=one(Int), I...; miners=nothing)
     G = graph(VG)
+    if miners !== nothing
+        speed = max_speed_for_miners(G, item, miners)
+    end
     real_item, real_speed, title = make_title(G, item, speed, I)
     table = recipe_table(real_item, real_speed, G)
     prettyrecipe(table, real_speed, title)
@@ -59,8 +69,11 @@ end
 ## Total cost of items in subrecipe = [2,3] for item at level 'I' onforward.
 ## TODO TODO
 ## TODO TODO
-function (VG::ViewGraph)(item::String, subrecipe::AbstractVector, speed=one(Int), I...)
+function (VG::ViewGraph)(item::String, subrecipe::AbstractVector, speed=one(Int), I...; miners=nothing)
     G = graph(VG)
+    if miners !== nothing
+        speed = max_speed_for_miners(G, item, miners)
+    end
     real_item, real_speed, title = make_title(G, item, speed, I)
     table = subrecipe_table(real_item, subrecipe, real_speed, G)
     table = sort_recipe_table(table, G)
