@@ -2,9 +2,11 @@
 export datatree
 
 const RECIPES = [
-    recipes_transformers(),
+    recipes_transformers(raw_materials1_list,
+                         raw_materials2_list,
+                         transformers_list),
     mk1, mk2, mk3,
-    rmk1, rmk2
+    recipes_radioactive(rmk1, rmk2),
 ]
 
 const MATERIAL_COUNT = length(tracked_materials)

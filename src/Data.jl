@@ -3,32 +3,32 @@
 # ==================== RAW MATERIALS ====================
 const raw_materials1_list = ["Gold", "Diamon", "Iron", "Copper", "Aluminium"]
 const raw_materials2_list = ["Uranium", "Plutonium"]
-const tracked_materials = vcat(raw_materials1_list, raw_materials2_list, ["Fuel"])
-const raw_materials = tracked_materials
+const raw_materials = vcat(raw_materials1_list, raw_materials2_list)
+const tracked_materials = push!(raw_materials, "Fuel")
 israwmaterial(string) = any(==(string), tracked_materials)
 
 
-# ==================== BASIC COMPONENTS ====================
-basic_components_list = ["Wire", "Liquid", "Gear", "Plate"]
+transformers_list = ["Wire", "Liquid", "Gear", "Plate"]
 ## Cable, Refined (missing)
-# transformers = ["WMaker", "Furance", "Cutter", "CMaker", "HPress", "Refinery"]
-# transform_dict = basic_components_list .=> transformers
+# transformers_names = ["WMaker", "Furance", "Cutter", "CMaker", "HPress", "Refinery"]
+# transformers_dict = transformers_list .=> transformers_names
 
-function recipes_transformers()
+# ==================== BASIC COMPONENTS ====================
+function recipes_transformers(raw_type1, raw_type2, transformers)
     recipes = Dict()
-    for (m, t) in Iterators.product(raw_materials1_list, basic_components_list)
+    for (m, t) in Iterators.product(raw_type1, transformers)
         name = m * t
         push!(recipes, name => Dict(m => 1))
     end
     # Add Cable version (sligthly different)
-    for m in raw_materials1_list
+    for m in raw_type1
         name = m * "Cable"
         ingridient = m * "Wire"
         push!(recipes,
             name => Dict(ingridient => 3))
     end
     # Add Refinery version (sligthly different)
-    for m in raw_materials2_list
+    for m in raw_type2
         name = m * "Refined"
         ingridient = m
         push!(recipes,
@@ -37,7 +37,7 @@ function recipes_transformers()
     return recipes
 end
 
-const transformer_items = Set(keys(recipes_transformers()))
+const transformer_items = collect(keys(recipes_transformers()))
 istransformer(string) = in(string, transformer_items)
 
 # ==================== MAKERS RECIPES ====================
@@ -172,6 +172,14 @@ mk3 = Dict(
         "ElectricBoard" => 8,
     ),
 )
+
+# ==================== RADIOACTIVE MAKERS RECIPES ====================
+add_refined_cost(item, maker) = push!(maker[item], "Fuel" => 1)
+add_refined_cost(maker) = add_refined_cost.(keys(maker), [maker])
+function recipes_radioactive(makers...)
+    new_makers = copy.(makers)
+    return (add_refined_cost(maker) for maker in new_makers)
+end
 
 rmk1 = Dict(
     "NCell" => Dict(
