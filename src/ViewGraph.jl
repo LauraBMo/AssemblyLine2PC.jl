@@ -146,45 +146,141 @@ function highlight_mainitems(table)
 end
 
 const LENGTH = 4
-const HEADERS = [
+const RECIPE_HEADERS = [
     ["Item", "Ratio", "Mkrs", "5xPacks", raw_materials1_list...],
-    # [ "", "[u/s]", "", fill("[u]", 5)...]
+]
+const TRANSRAW_HEADERS = [
+    ["Raw Material", "Ratio", "number of Miners"],
 ]
 const HLENGTH = LENGTH + length(raw_materials1_list)
+
+
+select_rows(table, indices) = isempty(indices) ? Matrix{Any}(undef, 0, size(table, 2)) : table[indices, :]
+
+function split_recipe_sections(table)
+    main = Int[]
+    transformers = Int[]
+    raw = Int[]
+    for (idx, row) in enumerate(eachrow(table))
+        name = row[1]
+        if israwmaterial(name)
+            push!(raw, idx)
+        elseif istransformer(name)
+            push!(transformers, idx)
+        else
+            push!(main, idx)
+        end
+    end
+    return (
+        main=select_rows(table, main),
+        transformers=select_rows(table, transformers),
+        raw=select_rows(table, raw),
+    )
+end
+
+miner_formatter(columns) = (v, i, j) -> (in(j, columns) ? v : nMiners(v / 5))
+
+const DEFAULT_STYLE = TextTableStyle(
+    first_line_column_label=crayon"bold",
+    source_note=crayon"bold light_blue",
+)
+
+const DEFAULT_FORMAT = TextTableFormat(
+    @text__no_vertical_lines,
+    vertical_line_after_continuation_column=true,
+    vertical_line_at_beginning=true,
+)
+
+function render_recipe_table(table;
+                             title="",
+                             column_labels,
+                             notminers_columns=[1, 2, 3],
+                             source_note=nothing)
+    isempty(table) && return nothing
+    alignment = [:l, fill(:r, size(table, 2) - 1)...]
+    kwargs = (
+        title=title,
+        column_labels=column_labels,
+        alignment=alignment,
+        formatters=[miner_formatter(notminers_columns)],
+        show_row_number_column=true,
+        row_number_column_label="Num",
+        summary_rows=my_summary(),
+        summary_row_labels=["", ""],
+        highlighters=highlight_mainitems(table),
+        style=DEFAULT_STYLE,
+        table_format=DEFAULT_FORMAT,
+    )
+    if isnothing(source_note)
+        return pretty_table(table; kwargs...)
+    else
+        return pretty_table(table; kwargs..., source_notes=source_note)
+    end
+end
+
+
+function build_transraw_table(transformers, raw)
+    rows = Any[
+        begin
+            total_raw = sum(row[(LENGTH + 1):end])
+            miners = nMiners(total_raw / 5)
+            Any[row[1], row[2], miners]
+        end
+        for table in (transformers, raw) for row in eachrow(table)
+    ]
+    if isempty(rows)
+        return Matrix{Any}(undef, 0, length(TRANSRAW_HEADERS[1]))
+    end
+    return reduce(vcat, (permutedims(row) for row in rows))
+end
+
+
+function render_transraw_table(table; title="Transformers & Raw Materials", source_note=nothing)
+    isempty(table) && return nothing
+    kwargs = (
+        title=title,
+        column_labels=TRANSRAW_HEADERS,
+        alignment=[:l, :r, :r],
+        show_row_number_column=true,
+        row_number_column_label="Num",
+        style=DEFAULT_STYLE,
+        table_format=DEFAULT_FORMAT,
+    )
+    if isnothing(source_note)
+        return pretty_table(table; kwargs...)
+    else
+        return pretty_table(table; kwargs..., source_notes=source_note)
+    end
+end
 
 
 function prettyrecipe(table, title="", notminers_columns=[1, 2, 3])
     total = sum(table[:, (LENGTH+1):end])
     src_string = @sprintf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" total nMiners(total / 5)
-    frt_miner(I) = (v, i, j) -> (in(j, I) ? v : nMiners(v / 5))
-    pt = pretty_table(
-        table;
+    sections = split_recipe_sections(table)
+
+    transraw_table = build_transraw_table(sections.transformers, sections.raw)
+
+    has_transraw = !isempty(transraw_table)
+    has_main = !isempty(sections.main)
+
+    source_for_transraw = has_transraw ? src_string : nothing
+    source_for_main = (!has_transraw && has_main) ? src_string : nothing
+
+    pt = render_recipe_table(
+        sections.main;
         title=title,
-        column_labels=HEADERS,
-        alignment=[:l, fill(:r, HLENGTH - 1)...],
-        formatters=[frt_miner(notminers_columns)],
-        #### Rows
-        show_row_number_column=true,
-        row_number_column_label="Num",
-        summary_rows=my_summary(),
-        # summary_row_labels = ["Totals:", "TOTAL:"],
-        # Labels add new column, we save it.
-        summary_row_labels=["", ""],
-        #### Columns
-        source_notes=src_string,
-        highlighters=highlight_mainitems(table),
-        style=TextTableStyle(;
-            first_line_column_label=crayon"bold",
-            source_note=crayon"bold light_blue",
-        ),
-        table_format=TextTableFormat(;
-            @text__no_vertical_lines,
-            # vertical_line_after_row_number_column = true
-            vertical_line_after_continuation_column=true,
-            vertical_line_at_beginning=true,
-        ),
+        column_labels=RECIPE_HEADERS,
+        notminers_columns=notminers_columns,
+        source_note=source_for_main,
     )
-    return pt
+
+    pt_transraw = render_transraw_table(
+        transraw_table;
+        source_note=source_for_transraw,
+    )
+
+    return something(pt_transraw, pt, nothing)
 end
 
 # using Printf

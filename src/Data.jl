@@ -6,6 +6,7 @@ raw_materials2_list = ["Uranium", "Plutonium"]
 raw_materials = vcat(raw_materials1_list, raw_materials2_list)
 israwmaterial(string) = any(==(string), raw_materials)
 
+
 # ==================== BASIC COMPONENTS ====================
 basic_components_list = ["Wire", "Liquid", "Gear", "Plate"]
 ## Cable, Refined (missing)
@@ -34,6 +35,9 @@ function recipes_transformers()
     end
     return recipes
 end
+
+const transformer_items = Set(keys(recipes_transformers()))
+istransformer(string) = in(string, transformer_items)
 
 # ==================== MAKERS RECIPES ====================
 mk1 = Dict(
