@@ -23,9 +23,7 @@ function nminers(name, speed=one(Int), data=datatree()) # speed in u/sec
 end
 
 # An amount of `top` working miners produce (5*top)u/sec of raw-materials.
-function topspeed(name, top, data=datatree())
-    nMiners(5 * top / cost(data, name))
-end
+topspeed(name, miners, data=datatree()) = 5 * miners / cost(data, name)
 
 # function tree_time_cost(name, speed=1.0, data=get_data())
 #     item = data[name]

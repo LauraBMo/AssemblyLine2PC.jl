@@ -1,6 +1,5 @@
 
 export viewgraph
-using Base: collect_preferences
 
 using Printf
 using PrettyTables
@@ -12,41 +11,60 @@ end
 viewgraph(G) = ViewGraph(G)
 graph(VG::ViewGraph) = VG.G
 
-function max_speed_for_miners(G, item, miners::Real)
-    miners < 0 && throw(ArgumentError("number of miners must be non-negative, got $(miners)"))
-    required_raw = cost(G, item)
-    required_raw == 0 && return 0.0
-    return (5 * miners) / required_raw
-end
-
-function make_title(G, item, speed, I)
+function get_pathdownwards(G, item, speed,
+                           path::Vector{Int},
+                           miners = nothing)
+    if !(isnothing(miners))
+        speed *= topspeed(item, miners, G)
+    end
     end_item = item
     end_speed = speed
-    title = @sprintf "%s(%0.2fu/s)" item speed
-    for i in I
+    string_path = @sprintf "%s(%0.2fu/s)" item speed
+    for i in path
         next_item = outneighbor_label(G, end_item, i)
         v = G[end_item, next_item]
         end_speed *= v
         end_item = next_item
         if v > 1
-            title *= @sprintf ">x%d>%s(%0.2fu/s)" v end_item end_speed
+            string_path *= @sprintf ">x%d>%s(%0.2fu/s)" v end_item end_speed
         else
-            title *= @sprintf ">>%s" end_item
+            string_path *= @sprintf ">>%s" end_item
         end
     end
-    title *= ":"
-    return end_item, end_speed, title
+    string_path *= ":"
+    return end_item, end_speed, string_path
 end
 
-function (VG::ViewGraph)(item::String, speed=one(Int), I...; miners=nothing)
+function (VG::ViewGraph)(item::String, I...;
+                         speed = one(Int),
+                         miners = nothing)
     G = graph(VG)
-    if miners !== nothing
-        speed = max_speed_for_miners(G, item, miners)
-    end
-    real_item, real_speed, title = make_title(G, item, speed, I)
+    real_item, real_speed, title = get_pathdownwards(G, item, speed, I, miners)
     table = recipe_table(real_item, real_speed, G)
+    if isnothing(table)
+        @printf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" real_speed nMiners(real_speed / 5)
+        return nothing
+    end
     prettyrecipe(table, real_speed, title)
 end
+
+## Total cost of items in subrecipe = [2,3] for item at level 'I' onforward.
+## TODO TODO
+## TODO TODO
+function (VG::ViewGraph)(item::String, subrecipe::AbstractVector, I...;
+                         speed=one(Int), miners=nothing)
+    G = graph(VG)
+    real_item, real_speed, title = get_pathdownwards(G, item, speed, I, miners)
+    table = subrecipe_table(real_item, subrecipe, real_speed, G)
+    if isnothing(table)
+        @printf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" real_speed nMiners(real_speed / 5)
+        return nothing
+    end
+    table = sort_recipe_table(table, G)
+    prettyrecipe(table, speed, title)
+end
+## TODO TODO
+## TODO TODO
 
 function recipe_table(name, speed=one(Int), data=datatree())
     # header = ["Component", "Rate", "Makers"; "Gold",...]
@@ -65,22 +83,6 @@ function recipe_table(name, speed=one(Int), data=datatree())
     end
     return out
 end
-
-## Total cost of items in subrecipe = [2,3] for item at level 'I' onforward.
-## TODO TODO
-## TODO TODO
-function (VG::ViewGraph)(item::String, subrecipe::AbstractVector, speed=one(Int), I...; miners=nothing)
-    G = graph(VG)
-    if miners !== nothing
-        speed = max_speed_for_miners(G, item, miners)
-    end
-    real_item, real_speed, title = make_title(G, item, speed, I)
-    table = subrecipe_table(real_item, subrecipe, real_speed, G)
-    table = sort_recipe_table(table, G)
-    prettyrecipe(table, speed, title)
-end
-## TODO TODO
-## TODO TODO
 
 function subrecipe_table(name, subrecipe, speed=one(Int), data=datatree())
     # header = ["Component", "Rate", "Makers"; "Gold",...]
@@ -148,19 +150,18 @@ const HEADERS = [
     ["Item", "Ratio", "Mkrs", "5xPacks", raw_materials1_list...],
     # [ "", "[u/s]", "", fill("[u]", 5)...]
 ]
+const HLENGTH = LENGTH + length(raw_materials1_list)
 
-function prettyrecipe(table, speed=one(Int), title="", notminers_columns=[1, 2, 3])
-    notes_str(total) = @sprintf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" total nMiners(total / 5)
+
+function prettyrecipe(table, title="", notminers_columns=[1, 2, 3])
+    total = sum(table[:, (LENGTH+1):end])
+    src_string = @sprintf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" total nMiners(total / 5)
     frt_miner(I) = (v, i, j) -> (in(j, I) ? v : nMiners(v / 5))
-    if isnothing(table)
-        print(title, "\n", notes_str(speed))
-        return nothing
-    end
     pt = pretty_table(
         table;
         title=title,
         column_labels=HEADERS,
-        alignment=[:l, fill(:r, LENGTH - 1 + 5)...],
+        alignment=[:l, fill(:r, HLENGTH - 1)...],
         formatters=[frt_miner(notminers_columns)],
         #### Rows
         show_row_number_column=true,
@@ -170,7 +171,7 @@ function prettyrecipe(table, speed=one(Int), title="", notminers_columns=[1, 2, 
         # Labels add new column, we save it.
         summary_row_labels=["", ""],
         #### Columns
-        source_notes=notes_str(sum(table[:, (LENGTH+1):end])),
+        source_notes=src_string,
         highlighters=highlight_mainitems(table),
         style=TextTableStyle(;
             first_line_column_label=crayon"bold",
