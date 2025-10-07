@@ -12,7 +12,7 @@ viewgraph(G) = ViewGraph(G)
 graph(VG::ViewGraph) = VG.G
 
 function get_pathdownwards(G, item, speed,
-                           path::Vector{Int},
+                           path,
                            miners = nothing)
     if !(isnothing(miners))
         speed *= topspeed(item, miners, G)
@@ -45,7 +45,7 @@ function (VG::ViewGraph)(item::String, I...;
         @printf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" real_speed nMiners(real_speed / 5)
         return nothing
     end
-    prettyrecipe(table, real_speed, title)
+    prettyrecipe(table, title)
 end
 
 ## Total cost of items in subrecipe = [2,3] for item at level 'I' onforward.
@@ -61,7 +61,7 @@ function (VG::ViewGraph)(item::String, subrecipe::AbstractVector, I...;
         return nothing
     end
     table = sort_recipe_table(table, G)
-    prettyrecipe(table, speed, title)
+    prettyrecipe(table, title)
 end
 ## TODO TODO
 ## TODO TODO
@@ -224,18 +224,13 @@ end
 
 
 function build_transraw_table(transformers, raw)
-    rows = Any[
-        begin
-            total_raw = sum(row[(LENGTH + 1):end])
-            miners = nMiners(total_raw / 5)
-            Any[row[1], row[2], miners]
-        end
-        for table in (transformers, raw) for row in eachrow(table)
-    ]
-    if isempty(rows)
-        return Matrix{Any}(undef, 0, length(TRANSRAW_HEADERS[1]))
-    end
-    return reduce(vcat, (permutedims(row) for row in rows))
+    _miners(row) = (total_raw = sum(row[(LENGTH + 1):end]);
+                    nMiners(total_raw / 5))
+    rows = [[row[1], row[2], _miners(row)]
+            for table in (transformers, raw)
+                for row in eachrow(table)]
+    return reduce(vcat, (permutedims(row) for row in rows);
+                  init = Matrix{Any}(undef, 0, length(TRANSRAW_HEADERS[1])))
 end
 
 
@@ -271,7 +266,7 @@ function prettyrecipe(table, title="", notminers_columns=[1, 2, 3])
     source_for_transraw = has_transraw ? src_string : nothing
     source_for_main = (!has_transraw && has_main) ? src_string : nothing
 
-    pt = render_recipe_table(
+    render_recipe_table(
         sections.main;
         title=title,
         column_labels=RECIPE_HEADERS,
@@ -279,12 +274,12 @@ function prettyrecipe(table, title="", notminers_columns=[1, 2, 3])
         source_note=source_for_main,
     )
 
-    pt_transraw = render_transraw_table(
+    render_transraw_table(
         transraw_table;
         source_note=source_for_transraw,
     )
 
-    return something(pt_transraw, pt, nothing)
+    # return pt_transraw, pt
 end
 
 # using Printf
