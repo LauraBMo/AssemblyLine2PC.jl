@@ -1,10 +1,11 @@
 # Complete Assembly Line 2 Crafting Tree Dictionary
 
 # ==================== RAW MATERIALS ====================
-raw_materials1_list = ["Gold", "Diamon", "Iron", "Copper", "Aluminium"]
-raw_materials2_list = ["Uranium", "Plutonium"]
-raw_materials = vcat(raw_materials1_list, raw_materials2_list)
-israwmaterial(string) = any(==(string), raw_materials)
+const raw_materials1_list = ["Gold", "Diamon", "Iron", "Copper", "Aluminium"]
+const raw_materials2_list = ["Uranium", "Plutonium"]
+const tracked_materials = vcat(raw_materials1_list, raw_materials2_list, ["Fuel"])
+const raw_materials = tracked_materials
+israwmaterial(string) = any(==(string), tracked_materials)
 
 
 # ==================== BASIC COMPONENTS ====================
