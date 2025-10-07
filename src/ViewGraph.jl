@@ -67,8 +67,8 @@ end
 ## TODO TODO
 
 function recipe_table(name, speed=one(Int), data=datatree())
-    # header = ["Component", "Rate", "Makers"; "Gold",...]
-    out = Matrix{Any}(undef, 0, LENGTH + 5)
+    # header = ["Component", "Rate", "Makers"; tracked materials...]
+    out = Matrix{Any}(undef, 0, HLENGTH)
     recipe = outneighbor_labels(data, name)
     # wide = maximum(length, recipe)
     if isempty(recipe)
@@ -99,7 +99,7 @@ end
 function sort_recipe_table(table, data)
     rows = collect(eachrow(table))
     sort!(rows, by=x -> vertex_high(data, first(x)))
-    out = Matrix{Any}(undef, LENGTH + 5, 0)
+    out = Matrix{Any}(undef, HLENGTH, 0)
     out = reduce(hcat, rows; init = out)
     return permutedims(out)
 end
@@ -146,13 +146,16 @@ function highlight_mainitems(table)
 end
 
 const LENGTH = 4
+const MATERIAL_HEADERS = tracked_materials
+const MATERIAL_UNITS = fill("u/s", length(MATERIAL_HEADERS))
+const HLENGTH = LENGTH + length(MATERIAL_HEADERS)
 const RECIPE_HEADERS = [
-    ["Item", "Ratio", "Mkrs", "5xPacks", raw_materials1_list...],
+    ["Item", "Ratio", "Mkrs", "5xPacks", MATERIAL_HEADERS...],
+    ["", "u/s", "count", "packs", MATERIAL_UNITS...],
 ]
 const TRANSRAW_HEADERS = [
     ["Raw Material", "Ratio", "number of Miners"],
 ]
-const HLENGTH = LENGTH + length(raw_materials1_list)
 
 
 select_rows(table, indices) = isempty(indices) ? Matrix{Any}(undef, 0, size(table, 2)) : table[indices, :]
