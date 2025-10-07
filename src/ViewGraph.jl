@@ -183,16 +183,17 @@ end
 
 miner_formatter(columns) = (v, i, j) -> (in(j, columns) ? v : nMiners(v / 5))
 
-const DEFAULT_STYLE = TextTableStyle(
-    first_line_column_label=crayon"bold",
-    source_note=crayon"bold light_blue",
-)
+const DEFAULT_STYLE = TextTableStyle(;
+                                     first_line_column_label=crayon"bold",
+                                     source_note=crayon"bold light_blue",
+                                     )
 
-const DEFAULT_FORMAT = TextTableFormat(
-    @text__no_vertical_lines,
-    vertical_line_after_continuation_column=true,
-    vertical_line_at_beginning=true,
-)
+const DEFAULT_FORMAT = TextTableFormat(;
+                                       @text__no_vertical_lines,
+                                       # vertical_line_after_row_number_column = true
+                                       vertical_line_after_continuation_column=true,
+                                       vertical_line_at_beginning=true,
+                                       )
 
 function render_recipe_table(table;
                              title="",
