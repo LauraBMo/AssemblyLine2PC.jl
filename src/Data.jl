@@ -4,6 +4,15 @@
 const raw_materials1_list = ["Gold", "Diamon", "Iron", "Copper", "Aluminium"]
 const raw_materials2_list = ["Uranium", "Plutonium"]
 const raw_materials = vcat(raw_materials1_list, raw_materials2_list)
+"""
+    tracked_materials
+
+Ordered vector of raw resources that anchor every cost tuple produced by
+AssemblyLine2PC.
+
+The final entry corresponds to "Fuel", allowing radioactive production chains to
+track energy demand alongside ore consumption.
+"""
 const tracked_materials = push!(raw_materials, "Fuel")
 israwmaterial(string) = any(==(string), tracked_materials)
 
