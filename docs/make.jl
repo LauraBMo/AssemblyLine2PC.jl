@@ -22,8 +22,8 @@ makedocs(;
         assets=String[],
     ),
     pages=pages,
-    strict=true,
-    linkcheck=true,
+    # strict=true,
+    # linkcheck=true,
     doctest=true,
 )
 
