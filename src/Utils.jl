@@ -28,6 +28,18 @@ function vertex_high(G, v)
     return high
 end
 
+function vertex_fuel_cost(G, v, speed = one(Int))
+    cost = ceil(Int, speed)
+    neighbors = collect(outneighbor_labels(G, v))
+    if !(isempty(neighbors))
+        for i in findall(isradioactive, neighbors)
+            neighbor = neighbors[i]
+            cost += vertex_fuel_cost(G, neighbor, G[v, neighbor] * speed)
+        end
+    end
+    return cost
+end
+
 # function vertex_cost(g, v)
 #     cost = one(Int)
 #     neighbors = outneighbor_labels(g, v)

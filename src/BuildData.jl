@@ -11,6 +11,8 @@ const MATERIAL_COUNT = length(tracked_materials)
 
 ## Improve: More effitien use of previus computed data
 function datatree()
+    ## Create graph with all vertices, vertices-data pre-set to (0,...,0)
+    ## and edges 'item1 >n> item2' when 'item1' requires 'n' unites of 'item2'.
     data = build_skeletontree()
     for v in topological_sort_by_dfs(data)
         node = label_for(data, v)

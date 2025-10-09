@@ -185,7 +185,6 @@ rmk1 = Dict(
         "SolarCell" => 3,
         "ElectricBoard" => 3,
         "Heater" => 3,
-        "Fuel" => 1,
     ),
     "NCircuit" => Dict(
         "PCircuit" => 2,
@@ -193,7 +192,6 @@ rmk1 = Dict(
         "Circuit" => 3,
         "GoldCable" => 3,
         "Processor" => 3,
-        "Fuel" => 1,
     ),
     "PCell" => Dict(
         "Plutonium" => 4,
@@ -201,7 +199,6 @@ rmk1 = Dict(
         "DiamonLiquid" => 10,
         "GoldCable" => 4,
         "CopperCable" => 4,
-        "Fuel" => 1,
     ),
     "PCircuit" => Dict(
         "Plutonium" => 5,
@@ -209,7 +206,6 @@ rmk1 = Dict(
         "Copper" => 5,
         "GoldCable" => 3,
         "DiamonWire" => 3,
-        "Fuel" => 1,
     ),
     "UCell" => Dict(
         "Uranium" => 4,
@@ -217,7 +213,6 @@ rmk1 = Dict(
         "DiamonLiquid" => 10,
         "GoldCable" => 4,
         "CopperCable" => 4,
-        "Fuel" => 1,
     ),
     "UCircuit" => Dict(
         "Uranium" => 5,
@@ -225,7 +220,6 @@ rmk1 = Dict(
         "Copper" => 5,
         "GoldCable" => 3,
         "DiamonWire" => 3,
-        "Fuel" => 1,
     ),
 )
 
@@ -237,7 +231,6 @@ rmk2 = Dict(
         "Processor" => 10,
         "DiamonCable" => 4,
         "GoldCable" => 4,
-        "Fuel" => 1,
     ),
     "NProcessor" => Dict(
         "NCircuit" => 1,
@@ -246,7 +239,6 @@ rmk2 = Dict(
         "AIProcessor" => 1,
         "Processor" => 5,
         "DiamonPlate" => 10,
-        "Fuel" => 1,
     ),
     "AtomicBomb" => Dict(
         "NProcessor" => 1,
@@ -255,7 +247,6 @@ rmk2 = Dict(
         "NCell" => 2,
         "Uranium" => 15,
         "Plutonium" => 15,
-        "Fuel" => 1,
     ),
     "AIRBomber" => Dict(
         "AtomicBomb" => 1,
@@ -264,7 +255,6 @@ rmk2 = Dict(
         "NCell" => 1,
         "NProcessor" => 1,
         "NCircuit" => 1,
-        "Fuel" => 1,
     ),
 )
 
