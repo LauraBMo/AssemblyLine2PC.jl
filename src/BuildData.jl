@@ -9,6 +9,17 @@ const RECIPES = [
 
 const MATERIAL_COUNT = length(tracked_materials)
 
+"""
+    datatree()
+
+Construct the complete crafting graph for Assembly Line 2.
+
+The resulting [`MetaGraph`](https://juliagraphs.org/MetaGraphsNext.jl/stable/) stores
+per-item resource footprints as vertex metadata so downstream analysis can reuse the
+same structure without re-traversing recipe data. The tuple stored on each vertex
+aligns with [`tracked_materials`](@ref), ensuring deterministic indexing for raw
+material accounting and visualization routines.
+"""
 ## Improve: More effitien use of previus computed data
 function datatree()
     data = build_skeletontree()
@@ -21,6 +32,13 @@ function datatree()
     return data
 end
 
+"""
+    build_skeletontree()
+
+Create an empty recipe graph seeded with vertices for every known item. Edges only
+store ingredient ratios; raw-resource footprints are populated later by
+[`datatree`](@ref).
+"""
 ## Build skeleton tree (only edge metadata)
 function build_skeletontree()
     G = empty_tree()
@@ -60,6 +78,12 @@ costs_dict(::Type{T}=Int, materials=tracked_materials) where T =
 costs_to_ntuple(dict, materials=tracked_materials) =
     ntuple(i -> dict[materials[i]], Val(length(materials)))
 
+"""
+    vertex_costs!(costs, graph, vertex, speed=1)
+
+Accumulate raw-resource demand for `vertex` into `costs`, scaling contributions by
+`speed` units per second.
+"""
 function vertex_costs!(COSTS, g, v, speed=one(Int))
     # println(v)
     neighbors = outneighbor_labels(g, v)
@@ -76,5 +100,11 @@ function vertex_costs!(COSTS, g, v, speed=one(Int))
 end
 
 # Get final tuple, ensure right order!
+"""
+    vertex_costs(graph, vertex, speed=1)
+
+Return the resource footprint tuple for `vertex`, scaled by `speed` units per
+second. The tuple ordering follows [`tracked_materials`](@ref).
+"""
 vertex_costs(g, v, speed=one(Int)) =
     costs_to_ntuple(vertex_costs!(costs_dict(typeof(speed)), g, v, speed))
