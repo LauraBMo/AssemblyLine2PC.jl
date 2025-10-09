@@ -152,6 +152,6 @@ AL2.speed(air, 350)
 ** By blocks in REPL with PrettyTables.jl
 #+begin_src julia
 viewg = AL2.ViewGraph(g)
-viewg(air)
+viewg(airb; miners = 311+46*2)
 
 #+end_src

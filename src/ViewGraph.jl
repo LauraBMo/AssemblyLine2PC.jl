@@ -12,8 +12,8 @@ viewgraph(G) = ViewGraph(G)
 graph(VG::ViewGraph) = VG.G
 
 function get_pathdownwards(G, item, speed,
-                           path,
-                           miners = nothing)
+    path,
+    miners=nothing)
     if !(isnothing(miners))
         speed *= topspeed(item, miners, G)
     end
@@ -36,8 +36,8 @@ function get_pathdownwards(G, item, speed,
 end
 
 function (VG::ViewGraph)(item::String, I...;
-                         speed = one(Int),
-                         miners = nothing)
+    speed=one(Int),
+    miners=nothing)
     G = graph(VG)
     real_item, real_speed, title = get_pathdownwards(G, item, speed, I, miners)
     table = recipe_table(real_item, real_speed, G)
@@ -52,7 +52,7 @@ end
 ## TODO TODO
 ## TODO TODO
 function (VG::ViewGraph)(item::String, subrecipe::AbstractVector, I...;
-                         speed=one(Int), miners=nothing)
+    speed=one(Int), miners=nothing)
     G = graph(VG)
     real_item, real_speed, title = get_pathdownwards(G, item, speed, I, miners)
     table = subrecipe_table(real_item, subrecipe, real_speed, G)
@@ -100,7 +100,7 @@ function sort_recipe_table(table, data)
     rows = collect(eachrow(table))
     sort!(rows, by=x -> vertex_high(data, first(x)))
     out = Matrix{Any}(undef, HLENGTH, 0)
-    out = reduce(hcat, rows; init = out)
+    out = reduce(hcat, rows; init=out)
     return permutedims(out)
 end
 
@@ -121,164 +121,124 @@ end
 
 
 ## Make it a macro?
-function highlight_mainitems(table)
-    hls = TextHighlighter[]
-    if size(table, 1) > 1
-        _ord = sortperm(map(row -> sum(row[3:end]), eachrow(table)))
-        sorteditems = table[:, 1][_ord]
-        hl_item(string, color) = TextHighlighter(
-            (data, i, j) -> (data[i, j] == string),
-            color
-        )
+function highlighters_recipetable(table)
+    _ord = sortperm(map(row -> sum(row[3:end]), eachrow(table)))
+    sorteditems = table[:, 1][_ord]
+    hl_item(string, color) = TextHighlighter(
+        (data, i, j) -> (data[i, j] == string),
+        color
+    )
 
-        hl_line(n, color) = TextHighlighter(
-            (data, i, j) -> (i == n),
-            color
-        )
-        hls = [
+    hl_line(n, color) = TextHighlighter(
+        (data, i, j) -> (i == n),
+        color
+    )
+
+    hl_transrawline(color) = TextHighlighter(
+        (data, i, j) -> istransraw(data[i, 1]),
+        color
+    )
+    hls = [
+        hl_transrawline(crayon"250"),
+    ]
+    if size(table, 1) > 1
+        hls = vcat(hls, [
             hl_item(sorteditems[end], crayon"bold red"),
             hl_item(sorteditems[end-1], crayon"bold light_blue"),
             hl_line(_ord[end], crayon"red"),
             hl_line(_ord[end-1], crayon"light_blue"),
-        ]
+        ])
     end
     return hls
 end
 
 const LENGTH = 4
-const MATERIAL_HEADERS = tracked_materials
-const MATERIAL_UNITS = fill("u/s", length(MATERIAL_HEADERS))
-const HLENGTH = LENGTH + length(MATERIAL_HEADERS)
+# const MATERIAL_HEADERS = tracked_materials
+# const MATERIAL_UNITS = fill("u/s", length(MATERIAL_HEADERS))
+const HLENGTH = LENGTH + length(tracked_materials)
 const RECIPE_HEADERS = [
-    ["Item", "Ratio", "Mkrs", "5xPacks", MATERIAL_HEADERS...],
-    ["", "u/s", "count", "packs", MATERIAL_UNITS...],
+    ["Item", "Ratio", "Mkrs", "5xPacks", tracked_materials...],
+    # ["", "u/s", "count", "packs", MATERIAL_UNITS...],
 ]
 const TRANSRAW_HEADERS = [
     ["Raw Material", "Ratio", "number of Miners"],
 ]
 
 
-select_rows(table, indices) = isempty(indices) ? Matrix{Any}(undef, 0, size(table, 2)) : table[indices, :]
-
-function split_recipe_sections(table)
-    main = Int[]
-    transformers = Int[]
-    raw = Int[]
-    for (idx, row) in enumerate(eachrow(table))
-        name = row[1]
-        if israwmaterial(name)
-            push!(raw, idx)
-        elseif istransformer(name)
-            push!(transformers, idx)
-        else
-            push!(main, idx)
-        end
-    end
-    return (
-        main=select_rows(table, main),
-        transformers=select_rows(table, transformers),
-        raw=select_rows(table, raw),
-    )
-end
+istransraw(name) = (israwmaterial(name) || istransformer(name))
+findalltransraw(table) = findall(istransraw, first.(eachrow(table)))
 
 miner_formatter(columns) = (v, i, j) -> (in(j, columns) ? v : nMiners(v / 5))
 
-const DEFAULT_STYLE = TextTableStyle(;
-                                     first_line_column_label=crayon"bold",
-                                     source_note=crayon"bold light_blue",
-                                     )
-
-const DEFAULT_FORMAT = TextTableFormat(;
-                                       @text__no_vertical_lines,
-                                       # vertical_line_after_row_number_column = true
-                                       vertical_line_after_continuation_column=true,
-                                       vertical_line_at_beginning=true,
-                                       )
-
-function render_recipe_table(table;
-                             title="",
-                             column_labels,
-                             notminers_columns=[1, 2, 3],
-                             source_note=nothing)
-    isempty(table) && return nothing
-    alignment = [:l, fill(:r, size(table, 2) - 1)...]
-    kwargs = (
-        title=title,
-        column_labels=column_labels,
-        alignment=alignment,
-        formatters=[miner_formatter(notminers_columns)],
+function kwargs_default()
+    DEFAULT_STYLE = TextTableStyle(;
+        first_line_column_label=crayon"bold",
+        source_note=crayon"bold light_blue",
+    )
+    DEFAULT_FORMAT = TextTableFormat(;
+        @text__no_vertical_lines,
+        # vertical_line_after_row_number_column = true
+        vertical_line_after_continuation_column=true,
+        vertical_line_at_beginning=true,
+    )
+    return (
         show_row_number_column=true,
         row_number_column_label="Num",
+        style=DEFAULT_STYLE,
+        table_format=DEFAULT_FORMAT,
+    )
+end
+
+function kwargs_recipetable(table, title="")
+    kwargs = kwargs_default()
+    notminers_columns = [1, 2, 3]
+    align = [:l, fill(:r, size(table, 2) - 1)...]
+    return (
+        title=title,
+        column_labels=RECIPE_HEADERS,
+        alignment=align,
+        formatters=[miner_formatter(notminers_columns)],
+        highlighters=highlighters_recipetable(table),
         summary_rows=my_summary(),
         summary_row_labels=["", ""],
-        highlighters=highlight_mainitems(table),
-        style=DEFAULT_STYLE,
-        table_format=DEFAULT_FORMAT,
+        kwargs...
     )
-    if isnothing(source_note)
-        return pretty_table(table; kwargs...)
-    else
-        return pretty_table(table; kwargs..., source_notes=source_note)
-    end
 end
 
-
-function build_transraw_table(transformers, raw)
-    _miners(row) = (total_raw = sum(row[(LENGTH + 1):end]);
-                    nMiners(total_raw / 5))
-    rows = [[row[1], row[2], _miners(row)]
-            for table in (transformers, raw)
-                for row in eachrow(table)]
-    return reduce(vcat, (permutedims(row) for row in rows);
-                  init = Matrix{Any}(undef, 0, length(TRANSRAW_HEADERS[1])))
-end
-
-
-function render_transraw_table(table; title="Transformers & Raw Materials", source_note=nothing)
-    isempty(table) && return nothing
-    kwargs = (
-        title=title,
+function kwargs_transrawtable()
+    kwargs = kwargs_default()
+    return (kwargs...,
+        title="Transformers & Raw Materials",
         column_labels=TRANSRAW_HEADERS,
         alignment=[:l, :r, :r],
-        show_row_number_column=true,
-        row_number_column_label="Num",
-        style=DEFAULT_STYLE,
-        table_format=DEFAULT_FORMAT,
     )
-    if isnothing(source_note)
-        return pretty_table(table; kwargs...)
-    else
-        return pretty_table(table; kwargs..., source_notes=source_note)
-    end
 end
 
+function build_transraw_table(recipes)
+    _table = Matrix{Any}(undef, 0, length(TRANSRAW_HEADERS[1]))
+    for row in eachrow(recipes)
+        total_row = sum(row[(LENGTH+1):end])
+        new_row = [row[1:2]..., nMiners(total_row / 5)]
+        _table = vcat(_table, permutedims(new_row))
+    end
+    return _table
+end
 
 function prettyrecipe(table, title="", notminers_columns=[1, 2, 3])
     total = sum(table[:, (LENGTH+1):end])
+
+    transraw = findalltransraw(table)
+    transraw_table = build_transraw_table(table[transraw, :])
+
     src_string = @sprintf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" total nMiners(total / 5)
-    sections = split_recipe_sections(table)
-
-    transraw_table = build_transraw_table(sections.transformers, sections.raw)
-
-    has_transraw = !isempty(transraw_table)
-    has_main = !isempty(sections.main)
-
-    source_for_transraw = has_transraw ? src_string : nothing
-    source_for_main = (!has_transraw && has_main) ? src_string : nothing
-
-    render_recipe_table(
-        sections.main;
-        title=title,
-        column_labels=RECIPE_HEADERS,
-        notminers_columns=notminers_columns,
-        source_note=source_for_main,
-    )
-
-    render_transraw_table(
-        transraw_table;
-        source_note=source_for_transraw,
-    )
-
+    if isempty(transraw_table)
+        pretty_table(table; kwargs_recipetable(table, title)...,
+            source_notes=src_string)
+    else
+        pretty_table(table; kwargs_recipetable(table, title)...)
+        pretty_table(transraw_table; kwargs_transrawtable()...,
+            source_notes=src_string)
+    end
     # return pt_transraw, pt
 end
 
