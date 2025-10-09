@@ -13,8 +13,6 @@ Use the navigation sidebar to explore:
 - **Architecture** – how the data graph is constructed and how to extend it.
 - **Performance tuning** – tips for squeezing the most out of the traversal and
   reporting utilities.
-- **Tutorials** – literate, executable walkthroughs that demonstrate multi-node
-  coordination, resilience strategies, and metrics instrumentation.
 - **API reference** – detailed signatures and docstrings for public entry points.
 
 ## Quick start
@@ -37,4 +35,4 @@ julia> VG(airb, 4, 6; miners = max_miners)
 ```
 
 Ready to dive deeper? Start with the [architecture tour](@ref) to understand how the
-graph is built, then try the hands-on [tutorials](@ref tutorial-hub).
+graph is built.
