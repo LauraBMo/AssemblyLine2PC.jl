@@ -28,6 +28,15 @@ jobs:
       - name: Instantiate documentation environment
         run: julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
 
+      - name: Install dependencies from GitHub
+        shell: julia --project=docs --color=yes {0}
+        run: |
+          using Pkg
+          Pkg.develop(
+          [PackageSpec(url="https://github.com/LauraBMo/MinerNumbers.jl.git"),
+          # PackageSpec(url="https://github.com/LauraBMo/NemoUtils.git")
+          ])
+
       - name: Doctest package
         run: julia --project=docs -e 'using Documenter, AssemblyLine2PC; DocMeta.setdocmeta!(AssemblyLine2PC, :DocTestSetup, :(using AssemblyLine2PC); recursive=true); doctest(AssemblyLine2PC)'
 
