@@ -8,8 +8,8 @@ Depth = 3
 ## Data ingestion pipeline
 
 AssemblyLine2PC constructs a layered [`MetaGraph`](https://juliagraphs.org/MetaGraphsNext.jl/stable/)
-where each recipe is a vertex and weighted edges encode ingredient ratios. The
-`datatree` builder stitches together transformer, maker, and radioactive recipes
+where each item in the game is a vertex and weighted edges encode ingredient ratios for its recipe, so leaves are raw-materials.
+The `datatree` builder stitches together transformer, maker, and radioactive recipes
 from the raw datasets defined in [`Data.jl`](https://github.com/LauraBMo/AssemblyLine2PC.jl/blob/main/src/Data.jl).
 
 1. **Skeleton graph** – [`build_skeletontree`](@ref) loads the recipe list and
@@ -44,28 +44,6 @@ vertex_data = tree["FusionCell"]
 
 Because the graph is recomputed from scratch, modifications remain deterministic
 and cache-friendly for documentation builds and tests.
-
-## Distributed analyses
-
-All functions operate on pure data structures without global state. This makes it
-safe to broadcast workloads across processes:
-
-```julia
-using Distributed
-addprocs(4)
-
-@everywhere using AssemblyLine2PC
-items = ["AtomicBomb", "NProcessor", "ElectricEngine"]
-
-results = @distributed (vcat) for item in items
-    tree = datatree()
-    total_material(item, 1, tree)
-end
-```
-
-Each worker builds its own `MetaGraph` and performs local analysis. Refer to the
-[multi-node coordination tutorial](@ref tutorial-multinode) for a larger example
-with structured result aggregation.
 
 ## Diagram
 

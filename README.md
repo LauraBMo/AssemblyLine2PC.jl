@@ -39,6 +39,9 @@ julia> AssemblyLine2PC.cost(tree, "ElectricEngine")  # total raw-material units
 ```
 
 ### 3. Plan production throughput
+
+Naviagate recipe for AI Robot Bomber ("AIRBomber" in [`Data.jl`](https://github.com/LauraBMo/AssemblyLine2PC.jl/blob/main/src/Data.jl)) at max theoretical speed for your given limit of starters:
+
 ```julia
 julia> using AssemblyLine2PC: topspeed, nminers, viewgraph
 
@@ -46,12 +49,12 @@ julia> VG = viewgraph(tree);
 
 julia> airb = "AIRBomber"
 
-julia> top_miners = 310 + 46*2  # Your starters limit for the job. 
+julia> max_miners = 310 + 46*2  # Your starters limit for the job. 
 
-julia> VG(airb; miners = top_miners)
+julia> VG(airb; miners = max_miners)
 # PrettyTables report showing intermediate makers, pack ratios, and raw demand…
 
-julia> VG(airb, 4, 6; miners = miners_needed)
+julia> VG(airb, 4, 6; miners = max_miners)
 ```
 ## Factory graph overview
 ```mermaid

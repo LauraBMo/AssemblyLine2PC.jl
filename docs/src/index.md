@@ -5,9 +5,8 @@ CurrentModule = AssemblyLine2PC
 # AssemblyLine2PC
 
 Welcome to the documentation portal for `AssemblyLine2PC.jl`, the Julia toolkit for
-analyzing Assembly Line 2 production graphs. The package ships the full recipe data
-set together with helpers for computing material requirements, sizing mining fleets,
-and rendering readable build reports.
+analyzing Assembly Line 2 production graphs.
+The package ships the full recipe data set together with helpers for computing material requirements, sizing mining fleets, and rendering readable build reports.
 
 Use the navigation sidebar to explore:
 
@@ -20,15 +19,21 @@ Use the navigation sidebar to explore:
 
 ## Quick start
 
+Naviagate recipe for AI Robot Bomber ("AIRBomber" in [`Data.jl`](https://github.com/LauraBMo/AssemblyLine2PC.jl/blob/main/src/Data.jl)) at max theoretical speed for your given limit of starters:
+
 ```julia
-julia> using AssemblyLine2PC
+julia> using AssemblyLine2PC: topspeed, nminers, viewgraph
 
-julia> tree = datatree();  # build the complete crafting graph
+julia> VG = viewgraph(tree);
 
-julia> miners = nminers("ElectricEngine", 4)  # miners required for 4 u/s
+julia> airb = "AIRBomber"
 
-julia> topspeed("ElectricEngine", miners)    # confirm the throughput budget
-4.0
+julia> max_miners = 310 + 46*2  # Your starters limit for the job. 
+
+julia> VG(airb; miners = max_miners)
+# PrettyTables report showing intermediate makers, pack ratios, and raw demand…
+
+julia> VG(airb, 4, 6; miners = max_miners)
 ```
 
 Ready to dive deeper? Start with the [architecture tour](@ref) to understand how the
