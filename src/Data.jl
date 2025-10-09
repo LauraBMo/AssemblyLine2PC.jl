@@ -267,3 +267,6 @@ rmk2 = Dict(
         "Fuel" => 1,
     ),
 )
+
+const radioactive_makers = union(collect(keys(rmk1)), collect(keys(rmk2)))
+isradioactive(string) = in(string, radioactive_makers)

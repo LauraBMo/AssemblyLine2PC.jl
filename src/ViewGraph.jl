@@ -164,9 +164,10 @@ const TRANSRAW_HEADERS = [
     ["Raw Material", "Ratio", "number of Miners"],
 ]
 
-
 istransraw(name) = (israwmaterial(name) || istransformer(name))
 findalltransraw(table) = findall(istransraw, first.(eachrow(table)))
+
+findallradioactive(table) = findall(isradioactive, first.(eachrow(table)))
 
 miner_formatter(columns) = (v, i, j) -> (in(j, columns) ? v : nMiners(v / 5))
 
@@ -224,22 +225,40 @@ function build_transraw_table(recipes)
     return _table
 end
 
+function total_radioactive_makers(table, idxs)
+    mapreduce(i -> round(Int, table[i, 3]), +, idxs; init=0)
+end
+
+function build_fuel_summary(recipes)
+    idxs = findallradioactive(recipes)
+    if isempty(idxs)
+        return nothing
+    end
+    makers = total_radioactive_makers(recipes, idxs)
+    per_second = makers / 6
+    miners = nMiners(per_second / 5)
+    return @sprintf("Total Fuel: %0.2f refined material u/s; Miners: %s", per_second, miners)
+end
+
 function prettyrecipe(table, title="", notminers_columns=[1, 2, 3])
     total = sum(table[:, (LENGTH+1):end])
 
     transraw = findalltransraw(table)
     transraw_table = build_transraw_table(table[transraw, :])
+    fuel_summary = build_fuel_summary(table)
 
     src_string = @sprintf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" total nMiners(total / 5)
+    notes = isnothing(fuel_summary) ? src_string : string(src_string, '\n', fuel_summary)
+
     if isempty(transraw_table)
         pretty_table(table; kwargs_recipetable(table, title)...,
-            source_notes=src_string)
-    else
-        pretty_table(table; kwargs_recipetable(table, title)...)
-        pretty_table(transraw_table; kwargs_transrawtable()...,
-            source_notes=src_string)
+            source_notes=notes)
+        return
     end
-    # return pt_transraw, pt
+
+    pretty_table(table; kwargs_recipetable(table, title)...) 
+    pretty_table(transraw_table; kwargs_transrawtable()...,
+        source_notes=notes)
 end
 
 # using Printf
