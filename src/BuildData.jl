@@ -2,11 +2,9 @@
 export datatree
 
 const RECIPES = [
-    recipes_transformers(raw_materials1_list,
-                         raw_materials2_list,
-                         transformers_list),
+    recipes_transformers(),
     mk1, mk2, mk3,
-    recipes_radioactive(rmk1, rmk2),
+    rmk1, rmk2,
 ]
 
 const MATERIAL_COUNT = length(tracked_materials)
@@ -46,11 +44,9 @@ empty_tree() = MetaGraph(
 # tier 0; amount none
 const INIT_DATA = ntuple(_ -> zero(Int), MATERIAL_COUNT)
 function build_skeletontree!(tree, maker_recipes)
-    for item in maker_recipes
-        name, recipe = first(item), last(item)
+    for (name, recipe) in maker_recipes
         tree[name] = INIT_DATA
-        for ingridient in recipe
-            iname, n = first(ingridient), last(ingridient)
+        for (iname, n) in recipe
             tree[iname] = INIT_DATA
             tree[name, iname] = n
         end

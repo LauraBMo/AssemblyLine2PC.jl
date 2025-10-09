@@ -14,7 +14,9 @@ transformers_list = ["Wire", "Liquid", "Gear", "Plate"]
 # transformers_dict = transformers_list .=> transformers_names
 
 # ==================== BASIC COMPONENTS ====================
-function recipes_transformers(raw_type1, raw_type2, transformers)
+function recipes_transformers(raw_type1 = raw_materials1_list,
+                              raw_type2 = raw_materials2_list,
+                              transformers = transformers_list)
     recipes = Dict()
     for (m, t) in Iterators.product(raw_type1, transformers)
         name = m * t
@@ -174,13 +176,8 @@ mk3 = Dict(
 )
 
 # ==================== RADIOACTIVE MAKERS RECIPES ====================
-add_refined_cost(item, maker) = push!(maker[item], "Fuel" => 1)
-add_refined_cost(maker) = add_refined_cost.(keys(maker), [maker])
-function recipes_radioactive(makers...)
-    new_makers = copy.(makers)
-    return (add_refined_cost(maker) for maker in new_makers)
-end
-
+## This makers need fuel to work, exactly 1/6th of a refined Uranium or Plutonium unit per second.
+## We add "Fuel" flag to account for it in costs computations.
 rmk1 = Dict(
     "NCell" => Dict(
         "PCell" => 2,
@@ -188,6 +185,7 @@ rmk1 = Dict(
         "SolarCell" => 3,
         "ElectricBoard" => 3,
         "Heater" => 3,
+        "Fuel" => 1,
     ),
     "NCircuit" => Dict(
         "PCircuit" => 2,
@@ -195,6 +193,7 @@ rmk1 = Dict(
         "Circuit" => 3,
         "GoldCable" => 3,
         "Processor" => 3,
+        "Fuel" => 1,
     ),
     "PCell" => Dict(
         "Plutonium" => 4,
@@ -202,6 +201,7 @@ rmk1 = Dict(
         "DiamonLiquid" => 10,
         "GoldCable" => 4,
         "CopperCable" => 4,
+        "Fuel" => 1,
     ),
     "PCircuit" => Dict(
         "Plutonium" => 5,
@@ -209,6 +209,7 @@ rmk1 = Dict(
         "Copper" => 5,
         "GoldCable" => 3,
         "DiamonWire" => 3,
+        "Fuel" => 1,
     ),
     "UCell" => Dict(
         "Uranium" => 4,
@@ -216,6 +217,7 @@ rmk1 = Dict(
         "DiamonLiquid" => 10,
         "GoldCable" => 4,
         "CopperCable" => 4,
+        "Fuel" => 1,
     ),
     "UCircuit" => Dict(
         "Uranium" => 5,
@@ -223,6 +225,7 @@ rmk1 = Dict(
         "Copper" => 5,
         "GoldCable" => 3,
         "DiamonWire" => 3,
+        "Fuel" => 1,
     ),
 )
 
@@ -234,6 +237,7 @@ rmk2 = Dict(
         "Processor" => 10,
         "DiamonCable" => 4,
         "GoldCable" => 4,
+        "Fuel" => 1,
     ),
     "NProcessor" => Dict(
         "NCircuit" => 1,
@@ -242,6 +246,7 @@ rmk2 = Dict(
         "AIProcessor" => 1,
         "Processor" => 5,
         "DiamonPlate" => 10,
+        "Fuel" => 1,
     ),
     "AtomicBomb" => Dict(
         "NProcessor" => 1,
@@ -250,6 +255,7 @@ rmk2 = Dict(
         "NCell" => 2,
         "Uranium" => 15,
         "Plutonium" => 15,
+        "Fuel" => 1,
     ),
     "AIRBomber" => Dict(
         "AtomicBomb" => 1,
@@ -258,5 +264,6 @@ rmk2 = Dict(
         "NCell" => 1,
         "NProcessor" => 1,
         "NCircuit" => 1,
+        "Fuel" => 1,
     ),
 )
