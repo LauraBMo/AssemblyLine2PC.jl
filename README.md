@@ -1,8 +1,7 @@
 # AssemblyLine2PC.jl
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://LauraBMo.github.io/AssemblyLine2PC.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://LauraBMo.github.io/AssemblyLine2PC.jl/dev/) [![Build Status](https://github.com/LauraBMo/AssemblyLine2PC.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/LauraBMo/AssemblyLine2PC.jl/actions/workflows/CI.yml?query=branch%3Amain) [![Coverage](https://codecov.io/gh/LauraBMo/AssemblyLine2PC.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/LauraBMo/AssemblyLine2PC.jl)
-
-> Tools for exploring the resource graph of **Assembly Line 2** (PC) and planning hyper-efficient factories.
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://LauraBMo.github.io/AssemblyLine2PC.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://LauraBMo.github.io/AssemblyLine2PC.jl/dev/) [![Build Status](https://github.com/LauraBMo/AssemblyLine2PC.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/LauraBMo/AssemblyLine2PC.jl/actions/workflows/CI.yml?query=branch%3Amain) 
+> Tools for exploring the resource graph of **Assembly Line 2** (PC) and planning efficient factories.
 
 AssemblyLine2PC.jl ships the crafting tree for Assembly Line 2 together with utilities to quantify production requirements, highlight bottlenecks, and render readable reports directly from Julia. Instead of transcribing blueprints by hand, you can load the complete data graph, ask for the raw-material footprint of any item, and iterate on layouts before booting the game.
 
@@ -24,7 +23,8 @@ AssemblyLine2PC.jl builds a directed recipe graph from the game's data and offer
 ### 1. Install the package
 ```julia
 julia> import Pkg
-julia> Pkg.add("https://github.com/LauraBMo/AssemblyLine2PC.jl.git")
+julia> Pkg.develop("https://github.com/LauraBMo/MinerNumbers.jl.git") # Dependency
+julia> Pkg.develop("https://github.com/LauraBMo/AssemblyLine2PC.jl.git")
 ```
 
 ### 2. Inspect a recipe
@@ -34,8 +34,6 @@ julia> using AssemblyLine2PC
 julia> tree = datatree();  # build the complete crafting graph
 
 julia> AssemblyLine2PC.cost(tree, "ElectricEngine")  # total raw-material units
-
-julia> AssemblyLine2PC.cost(tree, "ElectricEngine")  # total raw-material units
 ```
 
 ### 3. Plan production throughput
@@ -43,19 +41,18 @@ julia> AssemblyLine2PC.cost(tree, "ElectricEngine")  # total raw-material units
 Naviagate recipe for AI Robot Bomber ("AIRBomber" in [`Data.jl`](https://github.com/LauraBMo/AssemblyLine2PC.jl/blob/main/src/Data.jl)) at max theoretical speed for your given limit of starters:
 
 ```julia
-julia> using AssemblyLine2PC: topspeed, nminers, viewgraph
+julia> using AssemblyLine2PC
 
-julia> VG = viewgraph(tree);
+julia> VG = viewgraph();
 
 julia> airb = "AIRBomber"
-
 julia> max_miners = 310 + 46*2  # Your starters limit for the job. 
 
-julia> VG(airb; miners = max_miners)
 # PrettyTables report showing intermediate makers, pack ratios, and raw demand…
-
+julia> VG(airb; miners = max_miners)
 julia> VG(airb, 4, 6; miners = max_miners)
 ```
+
 ## Factory graph overview
 ```mermaid
 flowchart LR

@@ -7,18 +7,17 @@ Depth = 3
 
 ## Data ingestion pipeline
 
-AssemblyLine2PC constructs a layered [`MetaGraph`](https://juliagraphs.org/MetaGraphsNext.jl/stable/)
-where each item in the game is a vertex and weighted edges encode ingredient ratios for its recipe, so leaves are raw-materials.
+AssemblyLine2PC constructs a layered [`MetaGraph`](https://juliagraphs.org/MetaGraphsNext.jl/stable/) `G`
+where vertex are all the items in the game encode as name String.
+Weighted edges encode ingredient ratios for its recipe, when `item1` recipe requires `n` units of `item2`, the graph `G` has an edge `item1>n>item2`. 
+For example, raw-materials are kind of "leaves".
 The `datatree` builder stitches together transformer, maker, and radioactive recipes
 from the raw datasets defined in [`Data.jl`](https://github.com/LauraBMo/AssemblyLine2PC.jl/blob/main/src/Data.jl).
 
-1. **Skeleton graph** – [`build_skeletontree`](@ref build_skeletontree) loads the recipe list and
-   creates vertices for every item with zeroed resource tuples.
-2. **Topological traversal** – [`datatree`](@ref datatree) iterates vertices in
-   topological order so downstream costs are always available when needed.
-3. **Cost accumulation** – [`vertex_costs`](@ref vertex_costs) recursively tallies raw
-   resource demand, storing the result directly on the vertex for constant-time
-   lookups.
+1. **Skeleton graph** – [`build_skeletontree`](@ref build_skeletontree) creates vertices for every item with initial zero resource tuples, and adds edges for all recipes.
+2. **Cost accumulation** – [`vertex_costs`](@ref vertex_costs) recursively tallies raw
+   resource demand (total number of raw-materials units needed to produce 1u of item), storing the result directly on the vertex for constant-time lookups.
+3. **Topological traversal** – [`datatree`](@ref datatree) Topological order ensures downstream costs are always available when needed.
 
 !!! tip
     The tuple stored on each vertex aligns with [`raw_materials`](@ref raw_materials).
@@ -44,24 +43,6 @@ vertex_data = tree["FusionCell"]
 
 Because the graph is recomputed from scratch, modifications remain deterministic
 and cache-friendly for documentation builds and tests.
-
-## Diagram
-
-```mermaid
-flowchart TB
-    Raw[Raw materials] --> Trans[Transformers]
-    Trans --> Makers1[Early makers]
-    Makers1 --> Makers2[Advanced makers]
-    Makers2 --> Makers3[Late-game assemblies]
-    Makers3 --> Radio[Radioactive makers]
-    Radio --> Target[Target throughput]
-    Raw -.-> Fuel[Fuel accounting]
-    Fuel --> Radio
-```
-
-The directed edges represent how intermediate items feed higher-tier recipes.
-`Fuel` is modeled as an auxiliary dependency so the same traversal can track both
-ore extraction and energy demand.
 
 ## Related API
 

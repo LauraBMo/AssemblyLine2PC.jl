@@ -9,6 +9,7 @@ struct ViewGraph{T}
 end
 
 viewgraph(G) = ViewGraph(G)
+viewgraph() = viewgraph(datatree())
 graph(VG::ViewGraph) = VG.G
 
 function get_pathdownwards(G, item, speed,

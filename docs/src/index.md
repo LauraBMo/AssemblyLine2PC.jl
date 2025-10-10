@@ -17,21 +17,29 @@ Use the navigation sidebar to explore:
 
 ## Quick start
 
-Naviagate recipe for AI Robot Bomber ("AIRBomber" in [`Data.jl`](https://github.com/LauraBMo/AssemblyLine2PC.jl/blob/main/src/Data.jl)) at max theoretical speed for your given limit of starters:
+### Install
 
 ```julia
-julia> using AssemblyLine2PC: topspeed, nminers, viewgraph
+import Pkg
+Pkg.develop("https://github.com/LauraBMo/MinerNumbers.jl.git") # Dependency
+Pkg.develop("https://github.com/LauraBMo/AssemblyLine2PC.jl.git")
+```
 
-julia> VG = viewgraph(tree);
+### Naviagate recipe 
+For example, for AI Robot Bomber ("AIRBomber" in [`Data.jl`](https://github.com/LauraBMo/AssemblyLine2PC.jl/blob/main/src/Data.jl)) at max theoretical speed for your given limit of starters:
 
-julia> airb = "AIRBomber"
+```julia
+using AssemblyLine2PC
 
-julia> max_miners = 310 + 46*2  # Your starters limit for the job. 
+VG = viewgraph();
 
-julia> VG(airb; miners = max_miners)
+airb = "AIRBomber"
+max_miners = 310 + 46*2  # Your starters limit for the job. 
+
 # PrettyTables report showing intermediate makers, pack ratios, and raw demand…
-
-julia> VG(airb, 4, 6; miners = max_miners)
+VG(airb; miners = max_miners)
+# Look up subfactories
+VG(airb, 4, 6; miners = max_miners)
 ```
 
 Ready to dive deeper? Start with the [architecture tour](@ref architecture-tour) to
