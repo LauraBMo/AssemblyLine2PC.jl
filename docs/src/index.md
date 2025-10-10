@@ -34,5 +34,5 @@ julia> VG(airb; miners = max_miners)
 julia> VG(airb, 4, 6; miners = max_miners)
 ```
 
-Ready to dive deeper? Start with the [architecture tour](@ref) to understand how the
-graph is built.
+Ready to dive deeper? Start with the [architecture tour](@ref architecture-tour) to
+understand how the graph is built.

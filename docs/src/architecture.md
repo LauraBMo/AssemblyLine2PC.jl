@@ -1,4 +1,4 @@
-# Architecture overview
+# [Architecture overview](@id architecture-tour)
 
 ```@contents
 Pages = ["architecture.md"]
@@ -62,3 +62,13 @@ flowchart TB
 The directed edges represent how intermediate items feed higher-tier recipes.
 `Fuel` is modeled as an auxiliary dependency so the same traversal can track both
 ore extraction and energy demand.
+
+## Related API
+
+```@docs
+tracked_materials
+build_skeletontree
+datatree
+vertex_costs
+vertex_costs!
+```
