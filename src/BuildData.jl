@@ -7,7 +7,8 @@ const RECIPES = [
     rmk1, rmk2,
 ]
 
-const MATERIAL_COUNT = length(tracked_materials)
+# const MATERIAL_COUNT = length(raw_materials)
+const MATERIAL_COUNT = 7
 
 """
     datatree()
@@ -17,10 +18,9 @@ Construct the complete crafting graph for Assembly Line 2.
 The resulting [`MetaGraph`](https://juliagraphs.org/MetaGraphsNext.jl/stable/) stores
 per-item resource footprints as vertex metadata so downstream analysis can reuse the
 same structure without re-traversing recipe data. The tuple stored on each vertex
-aligns with [`tracked_materials`](@ref), ensuring deterministic indexing for raw
+aligns with [`raw_materials`](@ref), ensuring deterministic indexing for raw
 material accounting and visualization routines.
 """
-## Improve: More effitien use of previus computed data
 function datatree()
     ## Create graph with all vertices, vertices-data pre-set to (0,...,0)
     ## and edges 'item1 >n> item2' when 'item1' requires 'n' unites of 'item2'.
@@ -41,7 +41,6 @@ Create an empty recipe graph seeded with vertices for every known item. Edges on
 store ingredient ratios; raw-resource footprints are populated later by
 [`datatree`](@ref).
 """
-## Build skeleton tree (only edge metadata)
 function build_skeletontree()
     G = empty_tree()
     ## Add recipes' metadata
@@ -74,11 +73,11 @@ function build_skeletontree!(tree, maker_recipes)
 end
 
 # Cost is a Dict{String, Int} 'C' where 'C["raw-material"] = n. needed for 1u of v'
-costs_dict(::Type{T}=Int, materials=tracked_materials) where T =
-    Dict(materials .=> zeros(T, length(materials)))
+costs_dict(::Type{T}=Int) where T =
+    Dict(materials .=> zeros(T, MATERIAL_COUNT))
 # Dict(materials .=> zeros(nMiners, length(materials)))
-costs_to_ntuple(dict, materials=tracked_materials) =
-    ntuple(i -> dict[materials[i]], Val(length(materials)))
+costs_to_ntuple(dict) =
+    ntuple(i -> dict[raw_materials[i]], Val(MATERIAL_COUNT))
 
 """
     vertex_costs!(costs, graph, vertex, speed=1)
@@ -106,7 +105,7 @@ end
     vertex_costs(graph, vertex, speed=1)
 
 Return the resource footprint tuple for `vertex`, scaled by `speed` units per
-second. The tuple ordering follows [`tracked_materials`](@ref).
+second. The tuple ordering follows [`raw_materials`](@ref).
 """
 vertex_costs(g, v, speed=one(Int)) =
     costs_to_ntuple(vertex_costs!(costs_dict(typeof(speed)), g, v, speed))

@@ -76,10 +76,10 @@ end
 ################ No Need #######################
 
 # # Cost is a Dict{String, Int} 'C' where 'C["raw-material"] = n. needed for 1u of v'
-# costs_dict(::Type{T}=Int, materials=raw_materials1_list) where T =
+# costs_dict(::Type{T}=Int, materials=raws1) where T =
 #     Dict(materials .=> zeros(T, length(materials)))
 # # Dict(materials .=> zeros(nMiners, length(materials)))
-# dict_to_ntuple(dict, materials=raw_materials1_list) =
+# dict_to_ntuple(dict, materials=raws1) =
 #     ntuple(i -> dict[materials[i]], Val(5))
 
 # function vertex_costs!(COSTS, g, v, speed=one(Int))

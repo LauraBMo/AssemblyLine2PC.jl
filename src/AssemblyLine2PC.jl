@@ -12,12 +12,14 @@ include("ViewGraph.jl")
 
 export cost, total_material, nminers, topspeed
 
+export vertex_costs!, raw_materials, vertex_costs, build_skeletontree
+
 """
     cost(graph, item)
 
 Return the total raw-material tuple required to produce a single unit of `item`.
 
-The tuple ordering matches [`tracked_materials`](@ref) so each entry represents the
+The tuple ordering matches [`raw_materials`](@ref) so each entry represents the
 per-unit demand for the corresponding raw resource. This helper is convenient when
 you already have a pre-computed `graph` from [`datatree`](@ref) and need to inspect
 multiple items without re-running the traversal.
@@ -77,7 +79,7 @@ topspeed(name, miners, data=datatree()) = 5 * miners / cost(data, name)
 # using OrderedCollections
 
 # hastransformer1(str) = findfirst(occursin(str), build_slots())
-# hasmaterial1(str) = findfirst(occursin(str), raw_materials1_list)
+# hasmaterial1(str) = findfirst(occursin(str), raws1)
 
 # const MAT = "Material"
 # const OTH = "Others"

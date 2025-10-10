@@ -12,18 +12,18 @@ where each item in the game is a vertex and weighted edges encode ingredient rat
 The `datatree` builder stitches together transformer, maker, and radioactive recipes
 from the raw datasets defined in [`Data.jl`](https://github.com/LauraBMo/AssemblyLine2PC.jl/blob/main/src/Data.jl).
 
-1. **Skeleton graph** – [`build_skeletontree`](@ref) loads the recipe list and
+1. **Skeleton graph** – [`build_skeletontree`](@ref build_skeletontree) loads the recipe list and
    creates vertices for every item with zeroed resource tuples.
-2. **Topological traversal** – [`datatree`](@ref) iterates vertices in
+2. **Topological traversal** – [`datatree`](@ref datatree) iterates vertices in
    topological order so downstream costs are always available when needed.
-3. **Cost accumulation** – [`vertex_costs`](@ref) recursively tallies raw
+3. **Cost accumulation** – [`vertex_costs`](@ref vertex_costs) recursively tallies raw
    resource demand, storing the result directly on the vertex for constant-time
    lookups.
 
 !!! tip
-    The tuple stored on each vertex aligns with [`tracked_materials`](@ref).
+    The tuple stored on each vertex aligns with [`raw_materials`](@ref raw_materials).
     Keep this ordering in mind when performing manual indexing, or prefer helper
-    functions such as [`cost`](@ref) and [`total_material`](@ref) to avoid
+    functions such as [`cost`](@ref cost) and [`total_material`](@ref) to avoid
     off-by-one mistakes.
 
 ## Extending the recipe set
@@ -66,7 +66,6 @@ ore extraction and energy demand.
 ## Related API
 
 ```@docs
-tracked_materials
 build_skeletontree
 datatree
 vertex_costs

@@ -5,7 +5,7 @@ pipelines can benefit from a few best practices.
 
 ## Reuse the data graph
 
-Calling [`datatree`](@ref) constructs the entire recipe graph. The traversal is
+Calling [`datatree`](@ref datatree) constructs the entire recipe graph. The traversal is
 fast but still non-trivial—reuse the resulting `MetaGraph` whenever possible:
 
 ```julia

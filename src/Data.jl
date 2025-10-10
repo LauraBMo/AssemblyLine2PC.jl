@@ -1,20 +1,19 @@
 # Complete Assembly Line 2 Crafting Tree Dictionary
 
 # ==================== RAW MATERIALS ====================
-const raw_materials1_list = ["Gold", "Diamon", "Iron", "Copper", "Aluminium"]
-const raw_materials2_list = ["Uranium", "Plutonium"]
-const raw_materials = vcat(raw_materials1_list, raw_materials2_list)
-"""
-    tracked_materials
+const raws1 = ["Gold", "Diamon", "Iron", "Copper", "Aluminium"]
+const raws2 = ["Uranium", "Plutonium"]
 
-Ordered vector of raw resources that anchor every cost tuple produced by
-AssemblyLine2PC.
 
-The final entry corresponds to "Fuel", allowing radioactive production chains to
-track energy demand alongside ore consumption.
 """
-const tracked_materials = push!(raw_materials, "Fuel")
-israwmaterial(string) = any(==(string), tracked_materials)
+    raw_materials
+
+String ordered vector of raw resources that anchor all cost tuples produced by
+AssemblyLine2PC.jl.
+"""
+const raw_materials = vcat(raws1, raws2)
+
+israwmaterial(string) = any(==(string), raw_materials)
 
 
 transformers_list = ["Wire", "Liquid", "Gear", "Plate"]
@@ -23,8 +22,8 @@ transformers_list = ["Wire", "Liquid", "Gear", "Plate"]
 # transformers_dict = transformers_list .=> transformers_names
 
 # ==================== BASIC COMPONENTS ====================
-function recipes_transformers(raw_type1 = raw_materials1_list,
-                              raw_type2 = raw_materials2_list,
+function recipes_transformers(raw_type1 = raws1,
+                              raw_type2 = raws2,
                               transformers = transformers_list)
     recipes = Dict()
     for (m, t) in Iterators.product(raw_type1, transformers)

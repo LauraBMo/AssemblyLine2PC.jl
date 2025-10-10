@@ -164,11 +164,14 @@ function highlighters_recipetable(table)
 end
 
 const LENGTH = 4
-# const MATERIAL_HEADERS = tracked_materials
+# const MATERIAL_HEADERS = raw_materials
 # const MATERIAL_UNITS = fill("u/s", length(MATERIAL_HEADERS))
-const HLENGTH = LENGTH + length(tracked_materials)
+
+# const HLENGTH = LENGTH + length(raw_materials)
+const HLENGTH = LENGTH + 7
+
 const RECIPE_HEADERS = [
-    ["Item", "Ratio", "Mkrs", "5xPacks", tracked_materials...],
+    ["Item", "Ratio", "Mkrs", "5xPacks", raws1..., raws2...],
     # ["", "u/s", "count", "packs", MATERIAL_UNITS...],
 ]
 const TRANSRAW_HEADERS = [
