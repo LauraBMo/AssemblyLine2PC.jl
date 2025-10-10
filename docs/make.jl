@@ -1,6 +1,6 @@
 using AssemblyLine2PC
 using Documenter
-using Literate
+# using Literate
 
 DocMeta.setdocmeta!(AssemblyLine2PC, :DocTestSetup, :(using AssemblyLine2PC); recursive=true)
 
