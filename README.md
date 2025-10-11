@@ -3,7 +3,7 @@
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://LauraBMo.github.io/AssemblyLine2PC.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://LauraBMo.github.io/AssemblyLine2PC.jl/dev/) [![Build Status](https://github.com/LauraBMo/AssemblyLine2PC.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/LauraBMo/AssemblyLine2PC.jl/actions/workflows/CI.yml?query=branch%3Amain) 
 > Tools for exploring the resource graph of **Assembly Line 2** (PC) and planning efficient factories.
 
-You may consider this package as a Excel sheet with all the relevant information about the building-tree of the game, everything scaled to your current limit of starters and much easier to visualize and to navigate. See [screenshots](#3.1.-screenshots)
+You may consider this package as a Excel sheet with all the relevant information about the building-tree of the game, everything scaled to your current limit of starters and much easier to visualize and to navigate. See [screenshots](#31-screenshots)
 
 ## Why visualize the factory graph?
 
