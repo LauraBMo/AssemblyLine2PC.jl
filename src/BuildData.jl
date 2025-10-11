@@ -61,23 +61,16 @@ empty_tree() = MetaGraph(
 )
 
 # tier 0; amount none
-const INIT_DATA = ntuple(_ -> zero(Int), MATERIAL_COUNT)
+init_data(::Type{T}=Int) where T = ntuple(_ -> zero(T), MATERIAL_COUNT)
 function build_skeletontree!(tree, maker_recipes)
     for (name, recipe) in maker_recipes
-        tree[name] = INIT_DATA
+        tree[name] = init_data()
         for (iname, n) in recipe
-            tree[iname] = INIT_DATA
+            tree[iname] = init_data()
             tree[name, iname] = n
         end
     end
 end
-
-# Cost is a Dict{String, Int} 'C' where 'C["raw-material"] = n. needed for 1u of v'
-costs_dict(::Type{T}=Int) where T =
-    Dict(materials .=> zeros(T, MATERIAL_COUNT))
-# Dict(materials .=> zeros(nMiners, length(materials)))
-costs_to_ntuple(dict) =
-    ntuple(i -> dict[raw_materials[i]], Val(MATERIAL_COUNT))
 
 """
     vertex_costs!(costs, graph, vertex, speed=1)
@@ -87,6 +80,7 @@ Accumulate raw-resource demand for `vertex` into `costs`, scaling contributions 
 """
 function vertex_costs!(COSTS, g, v, speed=one(Int))
     # println(v)
+    # Cost is a Dict{String, Int} 'C' where 'C["raw-material"] = n. needed for 1u of v'
     neighbors = outneighbor_labels(g, v)
     if isempty(neighbors) # leave of the pseudo-tree
         # v is a raw-material
@@ -107,5 +101,12 @@ end
 Return the resource footprint tuple for `vertex`, scaled by `speed` units per
 second. The tuple ordering follows [`raw_materials`](@ref).
 """
-vertex_costs(g, v, speed=one(Int)) =
-    costs_to_ntuple(vertex_costs!(costs_dict(typeof(speed)), g, v, speed))
+function vertex_costs(G, v, speed=one(Int))
+    # Cost will be a Dict{String, Int} 'C' where 'C["raw-material"] = n' are needed for 1u of v'
+    # Initial zeroed cost dict
+    cost_dict = Dict(raw_materials .=> init_data(typeof(speed))) 
+    # Populate with actual costs
+    vertex_costs!(cost_dict, G, v, speed)
+    # Return as tuple (following raw_materials order)
+    return ntuple(rm -> dict[rm], raw_materials)
+end
