@@ -57,9 +57,9 @@ julia> VG(airb, 4, 6; miners = max_miners)
 Here some screenshots showing the output.
 Recipes to target "AI Robot Bomber" at a speed of 0.2u/s .
 
-<img src="AIRBomber.png" alt="AIR Bomber main" width="500"/>
+<img src="docs/src/assets/AIRBomber.png" alt="AIR Bomber main" width="500"/>
 
-<img src="AIRBomber4.png" alt="AIR Bomber 4-subrecipe" width="500"/>
+<img src="docs/src/assets/AIRBomber4.png" alt="AIR Bomber 4-subrecipe" width="500"/>
 
 ## Factory graph overview
 ```mermaid
