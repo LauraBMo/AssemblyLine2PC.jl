@@ -44,3 +44,13 @@ VG(airb, 4, 6; miners = max_miners)
 
 Ready to dive deeper? Start with the [architecture tour](@ref architecture-tour) to
 understand how the graph is built.
+
+See screenshots on how to navigate to graph.
+
+- First, recipe for AI Robot Bober and second, recipe for the 4th element in AI Robot Bomber; that is Atomic Bomb. 
+
+![AIR Bomber main](assets/AIRBomber.png)
+
+- Again, recipe for Atomic Bomb needed to produce 0.2u/s of AI Robot Bomber. Second, subrecipe (4, 3) for Ignition System (which we need at 0.4u/s, see the title).
+
+![AIR Bomber 4 and (4,6) subrecipes](assets/AIRBomber4.png)
