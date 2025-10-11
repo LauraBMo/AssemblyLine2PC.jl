@@ -3,7 +3,7 @@
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://LauraBMo.github.io/AssemblyLine2PC.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://LauraBMo.github.io/AssemblyLine2PC.jl/dev/) [![Build Status](https://github.com/LauraBMo/AssemblyLine2PC.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/LauraBMo/AssemblyLine2PC.jl/actions/workflows/CI.yml?query=branch%3Amain) 
 > Tools for exploring the resource graph of **Assembly Line 2** (PC) and planning efficient factories.
 
-You may consider this package as a Excel sheet with all the relevant information about the building-tree of the game, everything scaled to your current limit of starters and much easier to visualize and to navigate. See 
+You may consider this package as a Excel sheet with all the relevant information about the building-tree of the game, everything scaled to your current limit of starters and much easier to visualize and to navigate. See [screenshots](#3.1.-screenshots)
 
 ## Why visualize the factory graph?
 
@@ -53,7 +53,9 @@ julia> VG(airb; miners = max_miners)
 julia> VG(airb, 4, 6; miners = max_miners)
 ```
 
+#### 3.1. Screenshots
 Here some screenshots showing the output.
+Recipes to target "AI Robot Bomber" at a speed of 0.2u/s .
 
 <img src="AIRBomber.png" alt="AIR Bomber main" width="500"/>
 
