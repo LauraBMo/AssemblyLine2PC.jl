@@ -3,7 +3,7 @@
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://LauraBMo.github.io/AssemblyLine2PC.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://LauraBMo.github.io/AssemblyLine2PC.jl/dev/) [![Build Status](https://github.com/LauraBMo/AssemblyLine2PC.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/LauraBMo/AssemblyLine2PC.jl/actions/workflows/CI.yml?query=branch%3Amain) 
 > Tools for exploring the resource graph of **Assembly Line 2** (PC) and planning efficient factories.
 
-AssemblyLine2PC.jl ships the crafting tree for Assembly Line 2 together with utilities to quantify production requirements, highlight bottlenecks, and render readable reports directly from Julia. Instead of transcribing blueprints by hand, you can load the complete data graph, ask for the raw-material footprint of any item, and iterate on layouts before booting the game.
+You may consider this package as a Excel sheet with all the relevant information about the building-tree of the game, everything scaled to your current limit of starters and much easier to visualize and to navigate. See 
 
 ## Why visualize the factory graph?
 
@@ -52,6 +52,12 @@ julia> max_miners = 310 + 46*2  # Your starters limit for the job.
 julia> VG(airb; miners = max_miners)
 julia> VG(airb, 4, 6; miners = max_miners)
 ```
+
+Here some screenshots showing the output.
+
+<img src="AIRBomber.png" alt="AIR Bomber main" width="500"/>
+
+<img src="AIRBomber4.png" alt="AIR Bomber 4-subrecipe" width="500"/>
 
 ## Factory graph overview
 ```mermaid
