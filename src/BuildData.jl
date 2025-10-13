@@ -61,7 +61,7 @@ empty_tree() = MetaGraph(
 )
 
 # tier 0; amount none
-init_data(::Type{T}=Int) where T = ntuple(_ -> zero(T), MATERIAL_COUNT)
+init_data(::Type{T}=Int) where T = tuple(zeros(T, MATERIAL_COUNT)...)
 function build_skeletontree!(tree, maker_recipes)
     for (name, recipe) in maker_recipes
         tree[name] = init_data()
@@ -108,5 +108,5 @@ function vertex_costs(G, v, speed=one(Int))
     # Populate with actual costs
     vertex_costs!(cost_dict, G, v, speed)
     # Return as tuple (following raw_materials order)
-    return ntuple(rm -> dict[rm], raw_materials)
+    return ([cost_dict[rm] for rm in raw_materials]..., )
 end
