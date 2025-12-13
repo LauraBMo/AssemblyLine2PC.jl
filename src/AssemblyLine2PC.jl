@@ -9,10 +9,13 @@ using MinerNumbers
 include("Data.jl")
 include("BuildData.jl")
 include("ViewGraph.jl")
+include("Recipe.jl")
 
 export cost, total_material, nminers, topspeed
 
 export vertex_costs!, raw_materials, vertex_costs, build_skeletontree
+
+export full_recipe
 
 """
     cost(graph, item)

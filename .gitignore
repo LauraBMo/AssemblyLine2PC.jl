@@ -1,6 +1,49 @@
-*.jl.*.cov
+```
+# Julia-specific ignores
+*.ji
 *.jl.cov
 *.jl.mem
-/Manifest*.toml
-/docs/Manifest*.toml
-/docs/build/
+.julia/
+
+# Dependencies
+.julia/
+deps/build.log
+
+# General build artifacts
+build/
+dist/
+*.so
+*.dylib
+*.dll
+
+# Environment and cache
+.env
+.env.local
+.env.*
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# MyPy
+.mypy_cache/
+```
