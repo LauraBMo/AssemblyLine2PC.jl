@@ -1,11 +1,17 @@
 ## Needs Data.jl, depends on it.
-export datatree
+export datatree, autocomplete_keys
 
 const RECIPES = [
     recipes_transformers(),
     mk1, mk2, mk3,
     rmk1, rmk2,
 ]
+
+allkeys() = mapreduce(mk -> collect(keys(mk)), vcat, RECIPES)
+function autocomplete_keys()
+    key_strings = unique!(allkeys())
+    return (; zip(Symbol.(key_strings), key_strings)...)
+end
 
 # const MATERIAL_COUNT = length(raw_materials)
 const MATERIAL_COUNT = 7
@@ -61,7 +67,7 @@ empty_tree() = MetaGraph(
 )
 
 # tier 0; amount none
-init_data(::Type{T}=Int) where T = tuple(zeros(T, MATERIAL_COUNT)...)
+init_data(::Type{T}=Int) where T = ntuple(_ -> zero(T), Val(MATERIAL_COUNT))
 function build_skeletontree!(tree, maker_recipes)
     for (name, recipe) in maker_recipes
         tree[name] = init_data()
@@ -72,6 +78,7 @@ function build_skeletontree!(tree, maker_recipes)
     end
 end
 
+iscostset(cost) = !(all(iszero, cost)) # Cost already set for vertex 'v'
 """
     vertex_costs!(costs, graph, vertex, speed=1)
 
@@ -79,12 +86,16 @@ Accumulate raw-resource demand for `vertex` into `costs`, scaling contributions 
 `speed` units per second.
 """
 function vertex_costs!(COSTS, g, v, speed=one(Int))
-    # println(v)
     # Cost is a Dict{String, Int} 'C' where 'C["raw-material"] = n. needed for 1u of v'
+    current_cost = g[v]
     neighbors = outneighbor_labels(g, v)
     if isempty(neighbors) # leave of the pseudo-tree
         # v is a raw-material
         COSTS[v] += speed
+    elseif iscostset(current_cost)
+        for (i, rw) in enumerate(raw_materials)
+            COSTS[rw] += speed * current_cost[i]
+        end
     else
         for n in neighbors
             vertex_costs!(COSTS, g, n, speed * g[v, n])
@@ -104,9 +115,9 @@ second. The tuple ordering follows [`raw_materials`](@ref).
 function vertex_costs(G, v, speed=one(Int))
     # Cost will be a Dict{String, Int} 'C' where 'C["raw-material"] = n' are needed for 1u of v'
     # Initial zeroed cost dict
-    cost_dict = Dict(raw_materials .=> init_data(typeof(speed))) 
+    cost_dict = Dict(raw_materials .=> init_data(typeof(speed)))
     # Populate with actual costs
     vertex_costs!(cost_dict, G, v, speed)
     # Return as tuple (following raw_materials order)
-    return ([cost_dict[rm] for rm in raw_materials]..., )
+    return ntuple(i -> cost_dict[raw_materials[i]], Val(MATERIAL_COUNT))
 end

@@ -5,15 +5,46 @@
 import AssemblyLine2PC as AL2
 # using Graphs, MetaGraphsNext
 # using GraphPlot, Plots
-g = AL2.datatree()
+# g = AL2.datatree()
 air = "AIRobot"
 ab = "AtomicBomb"
 airb = "AIRBomber"
+## Current starters limit
+N = 320+45*2
+VG = AL2.viewgraph();
+kk = AL2.autocomplete_keys();
+# view_graph(airb; miners = 320+45*2)
+
+## Use as: (to get autocompletion with kk.Ex<tab>)
+# VG(kk.Explosive; speed = 15)
 
 #+end_src
 * Build graph
 #+begin_src julia
-viewg = AL2.ViewGraph(g)
+viewg = AL2.viewgraph()
 viewg(airb; miners = 311+46*2)
 
 #+end_src
+* Computer a top
+** Chips
+
+- Power Supply: 46 u/s
+- Fan: 92 u/s
+- Processor: 92 u/s
+
+  Total: 230 u\s -> 46 packs of 5 makers
+** Explosive 16u/s
+
+- Circuit 80: 16x5 packs
+  - Gold: 160: 32 miners
+  - CopperWire 80: 16x5 packs (16 miners)
+- Heater 160: 32x5 packs
+  - Aluminium 640: 128 miners
+  - IronWire 320: 16x20 packs (64 miners)
+- CopperCable 160: 32x5 packs
+  - CopperWire 480: 96x5 packs (96 miners)
+- DiamondWire 160: 32x5 packs (32 miners)
+
++ CopperWire 80+480=560: 28x20 packs (112 miners)
++ DiamondWire 160: 8x20 packs (32 miners)
+  

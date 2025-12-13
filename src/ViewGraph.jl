@@ -1,5 +1,5 @@
 
-export viewgraph
+export viewgraph, labels, graph
 
 using Printf
 using PrettyTables
@@ -10,7 +10,18 @@ end
 
 viewgraph(G) = ViewGraph(G)
 viewgraph() = viewgraph(datatree())
-graph(VG::ViewGraph) = VG.G
+graph(VG::ViewGraph) = getfield(VG, :G)
+labels(VG::ViewGraph) = MetaGraphsNext.labels(graph(VG))
+
+# Get all vertex labels from the MetaGraph
+function Base.propertynames(VG::ViewGraph)
+    return tuple(Symbol.(labels(VG)))
+end
+
+# Access vertices by property
+function Base.getproperty(VG::ViewGraph, name::Symbol)
+    return VG(string(name))
+end
 
 function get_pathdownwards(G, item, speed,
     path,
@@ -24,9 +35,9 @@ function get_pathdownwards(G, item, speed,
     for i in path
         next_item = outneighbor_label(G, end_item, i)
         v = G[end_item, next_item]
-        end_speed *= v
         end_item = next_item
         if v > 1
+            end_speed *= v
             string_path *= @sprintf ">x%d>%s(%0.2fu/s)" v end_item end_speed
         else
             string_path *= @sprintf ">>%s" end_item
@@ -59,25 +70,6 @@ function (VG::ViewGraph)(item::String, I...;
     fuel_summary(G, real_item, real_speed)
 end
 
-## Total cost of items in subrecipe = [2,3] for item at level 'I' onforward.
-## TODO TODO
-## TODO TODO
-function (VG::ViewGraph)(item::String, subrecipe::AbstractVector, I...;
-    speed=one(Int), miners=nothing)
-    G = graph(VG)
-    real_item, real_speed, title = get_pathdownwards(G, item, speed, I, miners)
-    table = subrecipe_table(real_item, subrecipe, real_speed, G)
-    if isnothing(table)
-        @printf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" real_speed nMiners(real_speed / 5)
-        return nothing
-    end
-    table = sort_recipe_table(table, G)
-    prettyrecipe(table, title)
-    fuel_summary(G, item)
-end
-## TODO TODO
-## TODO TODO
-
 function recipe_table(name, speed=one(Int), data=datatree())
     # header = ["Component", "Rate", "Makers"; tracked materials...]
     out = Matrix{Any}(undef, 0, HLENGTH)
@@ -92,41 +84,6 @@ function recipe_table(name, speed=one(Int), data=datatree())
         # N = nMiners(itspeed/5)
         newrow = [it itspeed Int(ceil(itspeed)) itspeed itspeed * collect(data[it])...]
         out = vcat(out, newrow)
-    end
-    return out
-end
-
-function subrecipe_table(name, subrecipe, speed=one(Int), data=datatree())
-    # header = ["Component", "Rate", "Makers"; "Gold",...]
-    table = recipe_table(name, speed, data)
-    for i in subrecipe
-        it = outneighbor_label(data, name, i)
-        itspeed = speed * data[name, it]
-        new_table = recipe_table(it, itspeed, data)
-        table = add_recipe_table(table, new_table)
-    end
-    return table
-end
-
-function sort_recipe_table(table, data)
-    rows = collect(eachrow(table))
-    sort!(rows, by=x -> vertex_high(data, first(x)))
-    out = Matrix{Any}(undef, HLENGTH, 0)
-    out = reduce(hcat, rows; init=out)
-    return permutedims(out)
-end
-
-function add_recipe_table(table1, table2)
-    out = table1
-    intable1(str) = findfirst(==(str), first(eachrow(table1)))
-    for newrow in eachrow(table2)
-        name = first(newrow)
-        isintable1 = intable1(name)
-        if isnothing(isintable1)
-            out = vcat(out, permutedims(newrow))
-        else
-            out[isintable1, 2:end] += newrow[2:end]
-        end
     end
     return out
 end
@@ -272,3 +229,57 @@ end
 #         @printf "|_> %-*s(%5.2f u/s): %02d Mkr and %s Mi\n" wide it itspeed ceil(itspeed) N
 #     end
 # end
+
+# ## Total cost of items in subrecipe = [2,3] for item at level 'I' onforward.
+# ## TODO TODO
+# ## TODO TODO
+# function (VG::ViewGraph)(item::String, subrecipe::AbstractVector{Int}, I...;
+#     speed=one(Int), miners=nothing)
+#     G = graph(VG)
+#     real_item, real_speed, title = get_pathdownwards(G, item, speed, I, miners)
+#     table = subrecipe_table(real_item, subrecipe, real_speed, G)
+#     if isnothing(table)
+#         @printf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" real_speed nMiners(real_speed / 5)
+#         return nothing
+#     end
+#     table = sort_recipe_table(table, G)
+#     prettyrecipe(table, title)
+#     fuel_summary(G, item)
+# end
+
+# function subrecipe_table(name, subrecipe, speed=one(Int), data=datatree())
+#     # header = ["Component", "Rate", "Makers"; "Gold",...]
+#     table = recipe_table(name, speed, data)
+#     for i in subrecipe
+#         it = outneighbor_label(data, name, i)
+#         itspeed = speed * data[name, it]
+#         new_table = recipe_table(it, itspeed, data)
+#         table = add_recipe_table(table, new_table)
+#     end
+#     return table
+# end
+
+# function sort_recipe_table(table, data)
+#     rows = collect(eachrow(table))
+#     sort!(rows, by=x -> vertex_high(data, first(x)))
+#     out = Matrix{Any}(undef, HLENGTH, 0)
+#     out = reduce(hcat, rows; init=out)
+#     return permutedims(out)
+# end
+
+# function add_recipe_table(table1, table2)
+#     out = table1
+#     intable1(str) = findfirst(==(str), first(eachrow(table1)))
+#     for newrow in eachrow(table2)
+#         name = first(newrow)
+#         isintable1 = intable1(name)
+#         if isnothing(isintable1)
+#             out = vcat(out, permutedims(newrow))
+#         else
+#             out[isintable1, 2:end] += newrow[2:end]
+#         end
+#     end
+#     return out
+# end
+# ## TODO TODO
+# ## TODO TODO
