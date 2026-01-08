@@ -1,5 +1,5 @@
 
-export viewgraph, labels, graph
+export viewgraph, labels, get_graph
 
 using Printf
 using PrettyTables
@@ -10,8 +10,8 @@ end
 
 viewgraph(G) = ViewGraph(G)
 viewgraph() = viewgraph(datatree())
-graph(VG::ViewGraph) = getfield(VG, :G)
-labels(VG::ViewGraph) = MetaGraphsNext.labels(graph(VG))
+get_graph(VG::ViewGraph) = getfield(VG, :G)
+labels(VG::ViewGraph) = MetaGraphsNext.labels(get_graph(VG))
 
 # Get all vertex labels from the MetaGraph
 function Base.propertynames(VG::ViewGraph)
@@ -23,32 +23,37 @@ function Base.getproperty(VG::ViewGraph, name::Symbol)
     return VG(string(name))
 end
 
-function get_pathdownwards(G, item, speed,
-    path,
-    miners=nothing)
-    if !(isnothing(miners))
-        speed *= topspeed(item, miners, G)
-    end
-    end_item = item
-    end_speed = speed
-    string_path = @sprintf "%s(%0.2fu/s)" item speed
-    for i in path
-        next_item = outneighbor_label(G, end_item, i)
-        v = G[end_item, next_item]
-        end_item = next_item
-        if v > 1
-            end_speed *= v
-            string_path *= @sprintf ">x%d>%s(%0.2fu/s)" v end_item end_speed
-        else
-            string_path *= @sprintf ">>%s" end_item
-        end
-    end
-    string_path *= ":"
-    return end_item, end_speed, string_path
+@kwdef mutable struct ShowRecipe{T}
+    item::String = "AIRobot"
+    speed::T = 1.0
+    header::String = @sprintf "%s(%0.2fu/s)" item speed
 end
 
-function fuel_summary(G, name, speed = one(Int))
-    makers = vertex_fuel_cost(G, name, speed)
+collect_path(init_item::String, init_speed::T, G, path = []) where {T} =
+    collect_path!(ShowRecipe(; item = init_item, speed = init_speed), G, path)
+
+function collect_path!(R::ShowRecipe, G, path)
+    for i in path
+        next_item = outneighbor_label(G, R.item, i)
+        rate = G[R.item, next_item]
+        iterate!(R, next_item, rate)
+    end
+    R.header *= ":"
+    return R
+end
+
+function iterate!(R::ShowRecipe, next_item, rate)
+    R.item = next_item
+    if rate > 1
+        R.speed *= rate
+        R.header *= @sprintf ">x%d>%s(%0.2fu/s)" rate R.item R.speed
+    else
+        R.header *= @sprintf ">>%s" R.item
+    end
+end
+
+function fuel_summary(R, G)
+    makers = vertex_fuel_cost(G, R.item, R.speed)
     per_second = makers / 6
     miners = nMiners(per_second / 5)
     summary = @sprintf"Total Fuel: %0.2f refined material u/s; Miners: %s" per_second miners
@@ -56,22 +61,25 @@ function fuel_summary(G, name, speed = one(Int))
 end
 
 
-function (VG::ViewGraph)(item::String, I...;
-    speed=one(Int),
-    miners=nothing)
-    G = graph(VG)
-    real_item, real_speed, title = get_pathdownwards(G, item, speed, I, miners)
-    table = recipe_table(real_item, real_speed, G)
+function (VG::ViewGraph)(item::String, path...; speed=1.0, miners=nothing)
+    G = get_graph(VG)
+    if !(isnothing(miners))
+        speed = topspeed(item, miners, G)
+    end
+    R = collect_path(item, speed, G, path)
+    table = recipe_table(R, G)
     if isnothing(table)
         @printf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" real_speed nMiners(real_speed / 5)
         return nothing
     end
-    prettyrecipe(table, title)
-    fuel_summary(G, real_item, real_speed)
+    prettyrecipe(table, R.header)
+    fuel_summary(R, G)
 end
 
-function recipe_table(name, speed=one(Int), data=datatree())
+function recipe_table(R::ShowRecipe, data=datatree())
     # header = ["Component", "Rate", "Makers"; tracked materials...]
+    name = R.item
+    speed = R.speed
     out = Matrix{Any}(undef, 0, HLENGTH)
     recipe = outneighbor_labels(data, name)
     # wide = maximum(length, recipe)
@@ -107,16 +115,16 @@ function highlighters_recipetable(table)
         (data, i, j) -> istransraw(data[i, 1]),
         color
     )
-    hls = [
-        hl_transrawline(crayon"250"),
-    ]
+    hls = [ hl_transrawline(crayon"250"), ]
     if size(table, 1) > 1
-        hls = vcat(hls, [
-            hl_item(sorteditems[end], crayon"bold red"),
-            hl_item(sorteditems[end-1], crayon"bold light_blue"),
-            hl_line(_ord[end], crayon"red"),
-            hl_line(_ord[end-1], crayon"light_blue"),
-        ])
+        append!(hls,
+                [
+                    hl_line(_ord[end], crayon"red"),
+                    hl_line(_ord[end-1], crayon"light_blue"),
+                    hl_item(sorteditems[end], crayon"bold red"),
+                    hl_item(sorteditems[end-1], crayon"bold light_blue"),
+                ])
+        reverse!(hls)
     end
     return hls
 end

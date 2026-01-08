@@ -6,17 +6,16 @@ import AssemblyLine2PC as AL2
 # using Graphs, MetaGraphsNext
 # using GraphPlot, Plots
 # g = AL2.datatree()
-air = "AIRobot"
-ab = "AtomicBomb"
-airb = "AIRBomber"
 ## Current starters limit
-N = 320+45*2
-VG = AL2.viewgraph();
+N = 330+45*2
 kk = AL2.autocomplete_keys();
-# view_graph(airb; miners = 320+45*2)
+VG = AL2.viewgraph();
 
 ## Use as: (to get autocompletion with kk.Ex<tab>)
 # VG(kk.Explosive; speed = 15)
+VG(kk.Explosive; miners=N)
+
+recipe = AL2.recipe(kk.IgnitionSystem);
 
 #+end_src
 * Build graph

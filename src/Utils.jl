@@ -12,6 +12,8 @@ my_summary() = [
     (data, j) -> __summary(j, data, "Ceil Sum:", ceil),
 ]
 
+findfirst_in(haystack, needlecase) = findfirst(needle -> occursin(needle, haystack), needlecase)
+
 function outneighbor_label(G, item, i)
     code = code_for(G, item)
     codes = outneighbors(G, code)
@@ -49,6 +51,42 @@ end
 #     end
 #     return cost
 # end
+
+function find_bestapprox(L, d; kwargs...)
+    ## We assume sum(L) == 1 
+    approx = [ceil(Int, x * d; kwargs...) for x in L]
+    total = sum(approx)
+    if total > d
+        _, i = findmax(approx)
+        approx[i] -= (total - d)
+    end
+    return approx
+end
+
+function total_error_for_denominator(L, d; kwargs...)
+    approx = find_bestapprox(L, d; kwargs...)
+    return sum(x -> abs2(d*x[1] - x[2]), zip(L, approx))
+end
+
+"""
+    approximate_with_fractions(L, denominators; kwargs...)
+
+Create rational approximations for list `L` using the best denominator from `denominators`.
+
+Additional keyword arguments are passed to `round` in `best_numerator`.
+
+Returns a vector of Rational numbers that best approximate the input floats.
+"""
+function approximate_with_fractions(L, denominators = collect(1:100);
+                                    error = total_error_for_denominator,
+                                    kwargs...)
+    # Find the optimal denominator
+    _, i = findmin(d -> error(L, d; kwargs...), denominators)
+    best_d = denominators[i]
+    
+    # Create fractions using the best denominator
+    best_d, find_bestapprox(L, best_d; kwargs...)
+end
 
 ################ No Need #######################
 # hasvertex_simplemetadata(g, v) = isless(0, tier(g, v))

@@ -1,143 +1,163 @@
-"""
-    full_recipe(object; rate=1, p1=5, p2=5, p3=5, p4=5, p5=5, data=datatree())
 
-Given an object, returns its recipe with detailed breakdown similar to:
+struct Recipe{T,S}
+    ## Step: (deep, item, speed)
+    rec::Vector{T} ## Vector of steps
+    G::S
+end
 
-** Explosive 16u/s
+recipe(r::Recipe) = r.rec
+get_graph(r::Recipe) = r.G
 
-- Circuit 80: 16x5 packs
-  - Gold: 160: 32 miners
-  - CopperWire 80: 16x5 packs (16 miners)
-- Heater 160: 32x5 packs
-  - Aluminium 640: 128 miners
-  - IronWire 320: 16x20 packs (64 miners)
-- CopperCable 160: 32x5 packs
-  - CopperWire 480: 96x5 packs (96 miners)
-- DiamondWire 160: 32x5 packs (32 miners)
+Base.:(==)(R::Recipe, s::String) = (R.item == s)
+Base.:(==)(s::String, R::Recipe) = (R == s)
 
-+ CopperWire 80+480=560: 28x20 packs (112 miners)
-+ DiamondWire 160: 8x20 packs (32 miners)
+function resetspeed!(R::Recipe, newspeed)
+    rec = recipe(R)
+    _, _, oldspeed = first(rec)
+    ratio = newspeed / oldspeed
+    for (i, (deep, item, speed)) in enumerate(rec)
+        R.rec[i] = (deep=deep, item=item, speed=ratio * speed)
+    end
+end
 
-Accepts optional parameters: p1=Wire packs size, p2=lvl1-crafter packs, etc.
-Uses pretty table to print output on REPL.
-"""
-function full_recipe(object; rate=1, p1=5, p2=5, p3=5, p4=5, p5=5, data=datatree())
-    # Get the recipe ingredients for the object
-    recipe = outneighbor_labels(data, object)
-    
-    if isempty(recipe)
-        # Object is a raw material
-        println("** $object $(rate)u/s")
-        miners_needed = ceil(rate / 5)
-        println("- $object: $(rate)u/s ($miners_needed miners)")
+function Base.print(io::IO, r::Recipe; indent="*", kwargs...)
+    for (deep, item, speed) in recipe(r)
+        tabstr = repeat(indent, length(deep) + 1)
+        @printf "%s %s(%0.2f[u/s])\n" tabstr item speed
+    end
+end
+Base.show(io::IO, recipe::Recipe) = Base.print(io, recipe)
+Base.show(io::IO, ::MIME"text/plain", recipe::Recipe) = Base.print(io, recipe)
+
+function recipe(item::String, speed=1.0, deep="", G=datatree(); miners=nothing)
+    p_recipe = pre_recipe(item, speed, deep, G; miners=miners)
+    return Recipe{eltype(p_recipe),typeof(G)}(p_recipe, G)
+end
+
+function pre_recipe(item::String, speed=1.0, deep="", G=datatree(); miners=nothing)
+    if !isnothing(miners)
+        speed = topspeed(item, miners, G)
+    end
+    p_recipe = [(deep=deep, item=item, speed=speed)]
+    alphebet = collect('a':'z')
+    # if !istransorraw(item)
+    # if !israwmaterial(item)
+    neighborhood = outneighbor_labels(G, item)
+    if !isempty(neighborhood)
+        for (i, next_item) in enumerate(neighborhood)
+            loc_speed = speed * G[item, next_item]
+            loc_deep = deep * alphebet[i]
+            append!(p_recipe, pre_recipe(next_item, loc_speed, loc_deep, G))
+        end
+    end
+    return p_recipe
+end
+
+function (R::Recipe{T})(item, del...; include=[], delete=[], full=true) where T
+    rec = recipe(R)
+    previous_steps = read_steps(rec, item)
+    append!(delete, del), unique!(delete)
+    subtitle = clear_steps!(previous_steps, rec, include, delete)
+    if isempty(previous_steps)
         return nothing
     end
-    
-    println("** $object $(rate)u/s")
-    
-    # Track all intermediate products and their total requirements
-    intermediate_totals = Dict{String, Float64}()
-    raw_material_totals = Dict{String, Float64}()
-    
-    # Process each ingredient in the recipe
-    for ingredient in recipe
-        ingredient_rate = rate * data[object, ingredient]
-        intermediate_totals[ingredient] = get(intermediate_totals, ingredient, 0.0) + ingredient_rate
-        
-        # Print main ingredient with pack info
-        packs_needed = ceil(ingredient_rate / p1)
-        crafters_needed = ceil(ingredient_rate)
-        
-        println("- $ingredient $(ingredient_rate): $(floor(Int, packs_needed))x$p1 packs ($(crafters_needed) crafters)")
-        
-        # Check if ingredient has sub-components
-        sub_ingredients = outneighbor_labels(data, ingredient)
-        if !isempty(sub_ingredients)
-            # Process sub-ingredients
-            for sub_ing in sub_ingredients
-                sub_rate = ingredient_rate * data[ingredient, sub_ing]
-                
-                # Update totals for sub-ingredient
-                intermediate_totals[sub_ing] = get(intermediate_totals, sub_ing, 0.0) + sub_rate
-                
-                # Get raw material requirements for this sub ingredient
-                sub_raw_needs = data[sub_ing]
-                
-                # Calculate packs needed for sub ingredient
-                sub_packs = ceil(sub_rate / p1)
-                
-                # Print sub-ingredient details
-                if istransformer(sub_ing) || israwmaterial(sub_ing)
-                    # It's a raw material or transformer
-                    miners_needed = ceil(sub_rate / 5)
-                    if sub_packs == floor(Int, sub_packs)
-                        println("  - $sub_ing: $(sub_rate): $(floor(Int, sub_packs))x$p1 packs ($(miners_needed) miners)")
-                    else
-                        println("  - $sub_ing: $(sub_rate): $(sub_packs)x$p1 packs ($(miners_needed) miners)")
-                    end
-                else
-                    # It's an intermediate product
-                    if sub_packs == floor(Int, sub_packs)
-                        println("  - $sub_ing $(sub_rate): $(floor(Int, sub_packs))x$p1 packs")
-                    else
-                        println("  - $sub_ing $(sub_rate): $(sub_packs)x$p1 packs")
-                    end
-                end
-                
-                # Add raw material requirements
-                raw_material_names = raw_materials
-                for (i, raw_mat) in enumerate(raw_material_names)
-                    if i <= length(sub_raw_needs)
-                        raw_amount = sub_raw_needs[i] * sub_rate
-                        if raw_amount > 0
-                            raw_material_totals[raw_mat] = get(raw_material_totals, raw_mat, 0.0) + raw_amount
-                        end
-                    end
-                end
-            end
-        else
-            # Ingredient is a raw material or transformer
-            if israwmaterial(ingredient) || istransformer(ingredient)
-                raw_amount = ingredient_rate
-                raw_material_totals[ingredient] = get(raw_material_totals, ingredient, 0.0) + raw_amount
-            end
-        end
+    tags, speeds = first.(previous_steps), last.(previous_steps)
+    total = sum(speeds)
+    title = @sprintf "Needs %s(%0.2f[u/s]) to produce" item total 
+    d, frac = approximate_with_fractions(speeds ./ total)
+    speeds_sources = [cost(rec, it) for it in tags]
+
+    del_notes = ""
+    if !isempty(include) || !isempty(delete)
+        c = cost(rec, item)
+        del_notes *= " (actual cost $(c)u/s ($(c - total) plus))." 
     end
-    
-    # Also add direct raw materials if the ingredient itself is one
-    raw_needs = data[object]
-    raw_material_names = raw_materials
-    for (i, raw_mat) in enumerate(raw_material_names)
-        if i <= length(raw_needs)
-            raw_amount = raw_needs[i] * rate
-            if raw_amount > 0
-                raw_material_totals[raw_mat] = get(raw_material_totals, raw_mat, 0.0) + raw_amount
-            end
-        end
+
+    if length(previous_steps) == 1
+        @printf ">> %s(%0.2f[u/s]).\n" first(tags) first(speeds_sources)
+        print(subtitle * del_notes)
+    else
+        result = pretty_table(
+            ## row1 are parts, row2 target speeds
+            permutedims(hcat(frac, speeds_sources));
+            kwargs_default()...,
+            formatters=[(v, i, j) -> (i == 1 ? Int(v) : v)],
+            # column_labels          = collect(enumerate(first.(inv_recipe))),
+            column_labels=join.(enumerate(tags)),
+            show_row_number_column=false,
+            source_notes="Splitting for $(item): $d parts" * del_notes,
+            # subtitle = "split factor $d",
+            title=title,
+            subtitle=subtitle,
+        )
+        result
     end
-    
-    # Display consolidated raw material requirements using pretty table
-    if !isempty(raw_material_totals)
-        println()
-        # Create a table for raw materials
-        raw_table = Matrix{Any}(undef, length(raw_material_totals), 3)
-        i = 1
-        for (raw_mat, total_amount) in raw_material_totals
-            miners_needed = ceil(total_amount / 5)
-            raw_packs = ceil(total_amount / p1)
-            raw_table[i, 1] = raw_mat
-            raw_table[i, 2] = "$(total_amount)"
-            raw_table[i, 3] = "$(miners_needed)"
-            i += 1
-        end
-        
-        # Use pretty table to display the raw material requirements
-        using PrettyTables
-        pretty_table(raw_table, 
-                    header=["Raw Material", "Amount (u/s)", "Miners"], 
-                    title="Raw Material Requirements",
-                    alignment=[:l, :r, :r],
-                    crop=:none,
-                    backend=:text)
+    if full && !israwmaterial(item)
+        viewgraph(get_graph(R))(item; speed=total)
     end
+end
+
+#### Some utils
+function cost(rec::AbstractVector, item::String)
+    I = findall(step -> step.item == item, rec)
+    return sum(step -> step.speed, rec[I])
+end
+
+isup(step1, step2) = !(length(step1.deep) >= length(step2.deep))
+function get_uptag(rec, i)
+    j = findlast(k -> isup(rec[k], rec[i]), 1:i)
+    up_step = rec[j]
+    return (up_step).item
+end
+
+function push_or_add!(pre_step, tag, sp)
+    isnew = findfirst_in(tag, first.(pre_step))
+    if isnothing(isnew)
+        push!(pre_step, [tag, sp])
+    else
+        pre_step[isnew][2] += sp
+    end
+end
+
+findall_steps(rec, item) = findall(step -> step.item == item, rec)
+# findall_steps(rec, item) = findall( ==(item), rec)
+
+function read_steps(rec, item)
+    steps = findall_steps(rec, item)
+    _, root, speed = first(rec)
+    previous_steps = []
+    if isempty(steps)
+        @printf "\n -- No need of \"%S\" to produce \"%S\", just relax!\n" item root
+        return previous_steps
+    end
+    if item == root
+        append!(previous_steps, [[root, speed]])
+        return previous_steps
+    end
+    for i in steps
+        ## Speed needed in step i-th comes from item in step (inv_i)-th.
+        tag = get_uptag(rec, i)
+        push_or_add!(previous_steps, tag, rec[i].speed)
+    end
+    return previous_steps
+end
+
+function title_setroot(rec)
+    _, root, speed = first(rec)
+    return @sprintf "-- Goal %s at (%0.2f[u/s])" root speed
+end
+
+function clear_steps!(steps, rec, include, delete)
+    title = title_setroot(rec)
+    if !isempty(include)
+        title *= (" (removed: " * join(include, ", ") * ").")
+        include_items = [first(steps[i]) for i in include]
+        filter!(step -> in(step[1], include_items), steps)
+    end
+    if !isempty(delete)
+        title *= (" (removed: " * join(delete, ", ") * ").")
+        delete_items = [first(steps[i]) for i in delete]
+        filter!(step -> !in(step[1], delete_items), steps)
+    end
+    return title
 end

@@ -62,7 +62,7 @@ empty_tree() = MetaGraph(
     # 1.- Vertex's high.
     # 2.- How many units of _EACH_ raw material is needed to produce 1u.
     vertex_data_type=NTuple{MATERIAL_COUNT,Int},
-    edge_data_type=Int64,  # How many source's recipe requires of target.
+    edge_data_type=Int64,  # How many [u] of target requires the source's recipe.
     graph_data="Full data graph",  # tag for the whole graph
 )
 
@@ -118,6 +118,6 @@ function vertex_costs(G, v, speed=one(Int))
     cost_dict = Dict(raw_materials .=> init_data(typeof(speed)))
     # Populate with actual costs
     vertex_costs!(cost_dict, G, v, speed)
-    # Return as tuple (following raw_materials order)
+    # Return as tuple (ensure 'raw_materials' order)
     return ntuple(i -> cost_dict[raw_materials[i]], Val(MATERIAL_COUNT))
 end
