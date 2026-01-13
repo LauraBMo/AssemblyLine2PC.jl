@@ -53,7 +53,7 @@ then converts that to the number of working Miners needed on the resource patche
 """
 function nminers(name, speed=one(Int), data=datatree()) # speed in u/sec
     # Each Miner produces 5u/sec
-    return nMiners(total_material(name, speed, data) / 5)
+    return nMiners(total_material(name, speed, data) / PRODUCTION_SPEED)
 end
 
 ## The actual time per unit at max update is 0.217391300, which is round to 0.2.
