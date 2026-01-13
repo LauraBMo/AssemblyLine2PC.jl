@@ -15,7 +15,9 @@ VG = AL2.viewgraph();
 # VG(kk.Explosive; speed = 15)
 VG(kk.Explosive; miners=N)
 
-recipe = AL2.recipe(kk.IgnitionSystem);
+ncell = AL2.recipe(kk.NCell; miners=N);
+AL2.resetspeed!(ncell, 8.5)
+
 
 #+end_src
 * Build graph
@@ -24,6 +26,7 @@ viewg = AL2.viewgraph()
 viewg(airb; miners = 311+46*2)
 
 #+end_src
+
 * Computer a top
 ** Chips
 
@@ -46,4 +49,26 @@ viewg(airb; miners = 311+46*2)
 
 + CopperWire 80+480=560: 28x20 packs (112 miners)
 + DiamondWire 160: 8x20 packs (32 miners)
-  
+* Production real ratio
+** Gold
+
+| Starters | Speed u/s | Real Ratio |
+|----------+-----------+------------|
+|      100 |       460 |      4.600 |
+|      200 |       920 |      4.600 |
+|      300 |      1380 |      4.600 |
+#+TBLFM: $4=$3/$2; %.3f
+
+** Diamond 
+
+| Starters | Speed u/s | Real Ratio | Real Production |
+|----------+-----------+------------+-----------------|
+|      100 |       460 |      4.600 |     0.217391300 |
+|      150 |       690 |      4.600 |     0.217391300 |
+|      200 |       920 |      4.600 |     0.217391300 |
+|      250 |      1150 |      4.600 |     0.217391300 |
+|      300 |      1380 |      4.600 |     0.217391300 |
+#+TBLFM: $3=$2/$1; %.3f
+#+TBLFM: $4=$1/$2; %.9f
+
+

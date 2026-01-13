@@ -7,9 +7,7 @@ end
 
 recipe(r::Recipe) = r.rec
 get_graph(r::Recipe) = r.G
-
-Base.:(==)(R::Recipe, s::String) = (R.item == s)
-Base.:(==)(s::String, R::Recipe) = (R == s)
+root(R::Recipe) = first(recipe(R)).item
 
 function resetspeed!(R::Recipe, newspeed)
     rec = recipe(R)
@@ -53,7 +51,8 @@ function pre_recipe(item::String, speed=1.0, deep="", G=datatree(); miners=nothi
     return p_recipe
 end
 
-function (R::Recipe{T})(item, del...; include=[], delete=[], full=true) where T
+function (R::Recipe{T})(item, del...;
+                        include=[], delete=[], full=true) where T
     rec = recipe(R)
     previous_steps = read_steps(rec, item)
     append!(delete, del), unique!(delete)
@@ -74,7 +73,7 @@ function (R::Recipe{T})(item, del...; include=[], delete=[], full=true) where T
     end
 
     if length(previous_steps) == 1
-        @printf ">> %s(%0.2f[u/s]).\n" first(tags) first(speeds_sources)
+        @printf "%s >> %s(%0.2f[u/s]).\n" title first(tags) first(speeds_sources)
         print(subtitle * del_notes)
     else
         result = pretty_table(
@@ -92,10 +91,13 @@ function (R::Recipe{T})(item, del...; include=[], delete=[], full=true) where T
         )
         result
     end
-    if full && !israwmaterial(item)
+    if full && !istransraw(item)
         viewgraph(get_graph(R))(item; speed=total)
     end
 end
+
+(R::Recipe)(; include=[], delete=[], full=true) = 
+ (R)(root(R); include=include, delete=delete, full=full)
 
 #### Some utils
 function cost(rec::AbstractVector, item::String)
