@@ -56,6 +56,11 @@ function nminers(name, speed=one(Int), data=datatree()) # speed in u/sec
     return nMiners(total_material(name, speed, data) / 5)
 end
 
+## The actual time per unit at max update is 0.217391300, which is round to 0.2.
+## So, each started produces 4.6 units per second; and not 5 (as I thought).
+## How many units per second an started produce:
+const PRODUCTION_SPEED = 4.6
+
 """
     topspeed(item, miners, data=datatree())
 
@@ -66,7 +71,7 @@ This is the inverse of [`nminers`](@ref) and is useful when you know the amount 
 extraction capacity available and want to determine the production ceiling before
 optimizing factory layout details.
 """
-topspeed(name, miners, data=datatree()) = 5 * miners / cost(data, name)
+topspeed(name, miners, data=datatree()) = PRODUCTION_SPEED * miners / cost(data, name)
 
 # function tree_time_cost(name, speed=1.0, data=get_data())
 #     item = data[name]
