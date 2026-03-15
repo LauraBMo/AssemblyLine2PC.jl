@@ -18,6 +18,21 @@ export vertex_costs!, raw_materials, vertex_costs, build_skeletontree
 
 export full_recipe
 
+## The actual time per unit at max update is 0.217391300, which is round to 0.2.
+## So, each started produces 4.6 units per second; and not 5 (as I thought).
+## How many units per second an started produce:
+const PRODUCTION_SPEED = 4.6
+
+
+include("Prices.jl")
+
+const PRICES = Dict(pairs(pmk1)...,
+                    pairs(pmk2)...,
+                    pairs(pmk3)...,
+                    pairs(prmk1)...,
+                    pairs(prmk2)...,
+                    )
+
 """
     cost(graph, item)
 
@@ -55,11 +70,6 @@ function nminers(name, speed=one(Int), data=datatree()) # speed in u/sec
     # Each Miner produces 5u/sec
     return nMiners(total_material(name, speed, data) / PRODUCTION_SPEED)
 end
-
-## The actual time per unit at max update is 0.217391300, which is round to 0.2.
-## So, each started produces 4.6 units per second; and not 5 (as I thought).
-## How many units per second an started produce:
-const PRODUCTION_SPEED = 4.6
 
 """
     topspeed(item, miners, data=datatree())

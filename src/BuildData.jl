@@ -61,7 +61,7 @@ empty_tree() = MetaGraph(
     label_type=String,  # Item name
     # 1.- Vertex's high.
     # 2.- How many units of _EACH_ raw material is needed to produce 1u.
-    vertex_data_type=NTuple{MATERIAL_COUNT,Int},
+    vertex_data_type=NTuple{MATERIAL_COUNT, Int},
     edge_data_type=Int64,  # How many [u] of target requires the source's recipe.
     graph_data="Full data graph",  # tag for the whole graph
 )

@@ -7,7 +7,7 @@ import AssemblyLine2PC as AL2
 # using GraphPlot, Plots
 # g = AL2.datatree()
 ## Current starters limit
-N = 360+50*2
+N = 405+60*2
 kk = AL2.autocomplete_keys();
 VG = AL2.viewgraph();
 
@@ -18,7 +18,9 @@ VG = AL2.viewgraph();
 # ncell = AL2.recipe(kk.NCell; miners=N);
 # AL2.resetspeed!(ncell, 8.5)
 
-ncircuit = AL2.recipe(kk.NCircuit; miners=N);
+# ncircuit = AL2.recipe(kk.NCircuit; miners=N);
+curr = AL2.recipe("NProcessor"; miners=N);
+AL2.resetspeed!(curr, 2.7)
 
 #+end_src
 
@@ -27,7 +29,7 @@ ncircuit = AL2.recipe(kk.NCircuit; miners=N);
 * Build graph
 #+begin_src julia
 viewg = AL2.viewgraph()
-viewg(airb; miners = 311+46*2)
+viewg(kk.Circuit; miners = N)
 
 #+end_src
 

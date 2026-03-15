@@ -42,15 +42,14 @@ function vertex_fuel_cost(G, v, speed = one(Int))
     return cost
 end
 
-# function vertex_cost(g, v)
-#     cost = one(Int)
-#     neighbors = outneighbor_labels(g, v)
-#     if !(isempty(neighbors))
-#         # println(map(n -> vertex_cost(g, n), neighbors))
-#         cost = sum(n -> g[v, n]*vertex_cost(g, n), neighbors)
-#     end
-#     return cost
-# end
+function vertex_total_cost(G, v, cost = zero(Int))
+    neighbors = collect(outneighbor_labels(G, v))
+    if !(isempty(neighbors))
+        # println(map(n -> vertex_cost(g, n), neighbors))
+        cost += sum(u -> G[v, u]*vertex_cost(G, u, cost), neighbors)
+    end
+    return cost
+end
 
 function find_bestapprox(L, d; kwargs...)
     ## We assume sum(L) == 1 
@@ -65,7 +64,7 @@ end
 
 function total_error_for_denominator(L, d; kwargs...)
     approx = find_bestapprox(L, d; kwargs...)
-    return sum(x -> abs2(d*x[1] - x[2]), zip(L, approx))
+    return sum(abs.(L .- (approx./d)))
 end
 
 """
@@ -73,9 +72,7 @@ end
 
 Create rational approximations for list `L` using the best denominator from `denominators`.
 
-Additional keyword arguments are passed to `round` in `best_numerator`.
-
-Returns a vector of Rational numbers that best approximate the input floats.
+Additional keyword arguments are passed to `ceil` in `find_bestapprox`.
 """
 function approximate_with_fractions(L, denominators = collect(1:100);
                                     error = total_error_for_denominator,
@@ -86,6 +83,19 @@ function approximate_with_fractions(L, denominators = collect(1:100);
     
     # Create fractions using the best denominator
     best_d, find_bestapprox(L, best_d; kwargs...)
+end
+
+function approximate_with_fractions_splited(split, L, denominators = collect(1:100);
+                                            error = total_error_for_denominator,
+                                            kwargs...)
+    out = Dict()
+    full_split = parse_split!(split, length(L))
+    for I in full_split
+        push!(out,
+              I => approximate_with_fractions(L[I])
+              )
+    end
+    return out
 end
 
 ################ No Need #######################

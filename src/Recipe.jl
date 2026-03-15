@@ -52,7 +52,7 @@ function pre_recipe(item::String, speed=1.0, deep="", G=datatree(); miners=nothi
 end
 
 function (R::Recipe{T})(item, del...;
-                        include=[], delete=[], full=true) where T
+                        include=[], delete=[], full=true, split=nothing) where T
     rec = recipe(R)
     previous_steps = read_steps(rec, item)
     append!(delete, del), unique!(delete)
@@ -62,8 +62,25 @@ function (R::Recipe{T})(item, del...;
     end
     tags, speeds = first.(previous_steps), last.(previous_steps)
     total = sum(speeds)
-    title = @sprintf "Needs %s(%0.2f[u/s]) to produce" item total 
+    title = @sprintf "Needs %s(%0.2f[u/s]" item total 
+    if israwmaterial(item)
+        # title *= @sprintf " miners: %0.2f" total/PRODUCTION_SPEED
+        title *= @sprintf " miners: %i" ceil(Int, total/PRODUCTION_SPEED)
+    end
+    title *= ") to produce:"
+
     d, frac = approximate_with_fractions(speeds ./ total)
+    if !(isnothing(split))
+        new_frac = approximate_with_fractions_splited(split, speeds ./ total)
+        println(new_frac)
+        for I in split
+            for (j, i) in enumerate(I)
+                # frac[i] = new_frac[I][2][j]
+                println(new_frac[I][2][j])
+            end
+        end
+    end
+
     speeds_sources = [cost(rec, it) for it in tags]
 
     del_notes = ""
@@ -113,11 +130,12 @@ function get_uptag(rec, i)
 end
 
 function push_or_add!(pre_step, tag, sp)
-    isnew = findfirst_in(tag, first.(pre_step))
-    if isnothing(isnew)
+    i_new = findfirst_in(tag, first.(pre_step))
+    isnew = isnothing(i_new)
+    if isnew
         push!(pre_step, [tag, sp])
     else
-        pre_step[isnew][2] += sp
+        pre_step[i_new][2] += sp
     end
 end
 
@@ -146,7 +164,7 @@ end
 
 function title_setroot(rec)
     _, root, speed = first(rec)
-    return @sprintf "-- Goal %s at (%0.2f[u/s])" root speed
+    return @sprintf "-- Goal %s at (%0.2f[u/s])\n" root speed
 end
 
 function clear_steps!(steps, rec, include, delete)
@@ -162,4 +180,13 @@ function clear_steps!(steps, rec, include, delete)
         filter!(step -> !in(step[1], delete_items), steps)
     end
     return title
+end
+
+function parse_split!(split, n)
+    for i in 1:n
+        if all(I -> !(i in I), split)
+            push!(split, [i])
+        end
+    end
+    return split
 end
