@@ -31,12 +31,12 @@ function datatree()
     ## Create graph with all vertices, vertices-data pre-set to (0,...,0)
     ## and edges 'item1 >n> item2' when 'item1' requires 'n' unites of 'item2'.
     data = build_skeletontree()
-    for v in topological_sort_by_dfs(data)
-        node = label_for(data, v)
-        # Get final tuple, ensure right order!
-        costs = vertex_costs(data, node)
-        data[node] = costs
-    end
+    # for v in topological_sort_by_dfs(data)
+    #     node = label_for(data, v)
+    #     # Get final tuple, ensure right order!
+    #     costs = vertex_costs(data, node)
+    #     data[node] = costs
+    # end
     return data
 end
 
@@ -61,13 +61,14 @@ empty_tree() = MetaGraph(
     label_type=String,  # Item name
     # 1.- Vertex's high.
     # 2.- How many units of _EACH_ raw material is needed to produce 1u.
-    vertex_data_type=NTuple{MATERIAL_COUNT, Int},
+    vertex_data_type=Nothing,
     edge_data_type=Int64,  # How many [u] of target requires the source's recipe.
     graph_data="Full data graph",  # tag for the whole graph
 )
 
 # tier 0; amount none
-init_data(::Type{T}=Int) where T = ntuple(_ -> zero(T), Val(MATERIAL_COUNT))
+# init_data(::Type{T}=Int) where T = ntuple(_ -> zero(T), Val(MATERIAL_COUNT))
+init_data(::Type{T}=Int) where T = nothing
 function build_skeletontree!(tree, maker_recipes)
     for (name, recipe) in maker_recipes
         tree[name] = init_data()
@@ -78,46 +79,3 @@ function build_skeletontree!(tree, maker_recipes)
     end
 end
 
-iscostset(cost) = !(all(iszero, cost)) # Cost already set for vertex 'v'
-"""
-    vertex_costs!(costs, graph, vertex, speed=1)
-
-Accumulate raw-resource demand for `vertex` into `costs`, scaling contributions by
-`speed` units per second.
-"""
-function vertex_costs!(COSTS, g, v, speed=one(Int))
-    # Cost is a Dict{String, Int} 'C' where 'C["raw-material"] = n. needed for 1u of v'
-    current_cost = g[v]
-    neighbors = outneighbor_labels(g, v)
-    if isempty(neighbors) # leave of the pseudo-tree
-        # v is a raw-material
-        COSTS[v] += speed
-    elseif iscostset(current_cost)
-        for (i, rw) in enumerate(raw_materials)
-            COSTS[rw] += speed * current_cost[i]
-        end
-    else
-        for n in neighbors
-            vertex_costs!(COSTS, g, n, speed * g[v, n])
-        end
-        # println(map(n -> vertex_cost(g, n), neighbors))
-    end
-    return COSTS
-end
-
-# Get final tuple, ensure right order!
-"""
-    vertex_costs(graph, vertex, speed=1)
-
-Return the resource footprint tuple for `vertex`, scaled by `speed` units per
-second. The tuple ordering follows [`raw_materials`](@ref).
-"""
-function vertex_costs(G, v, speed=one(Int))
-    # Cost will be a Dict{String, Int} 'C' where 'C["raw-material"] = n' are needed for 1u of v'
-    # Initial zeroed cost dict
-    cost_dict = Dict(raw_materials .=> init_data(typeof(speed)))
-    # Populate with actual costs
-    vertex_costs!(cost_dict, G, v, speed)
-    # Return as tuple (ensure 'raw_materials' order)
-    return ntuple(i -> cost_dict[raw_materials[i]], Val(MATERIAL_COUNT))
-end

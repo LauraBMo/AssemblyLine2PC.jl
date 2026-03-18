@@ -1,42 +1,36 @@
 
-struct Recipe{T,S}
-    ## Step: (deep, item, speed)
-    rec::Vector{T} ## Vector of steps
-    G::S
+@kwdef mutable struct Recipe{T}
+    root::String = "NProcessor"
+    speed::Float64 = 1.0
+    G::T = datatree()
 end
 
-recipe(r::Recipe) = r.rec
-get_graph(r::Recipe) = r.G
-root(R::Recipe) = first(recipe(R)).item
+graph(R::Recipe) = R.G
+root(R::Recipe) = R.root
+speed(R::Recipe) = R.speed
 
 function resetspeed!(R::Recipe, newspeed)
-    rec = recipe(R)
-    _, _, oldspeed = first(rec)
-    ratio = newspeed / oldspeed
-    for (i, (deep, item, speed)) in enumerate(rec)
-        R.rec[i] = (deep=deep, item=item, speed=ratio * speed)
-    end
+    R.speed = newspeed
 end
 
 function Base.print(io::IO, r::Recipe; indent="*", kwargs...)
     for (deep, item, speed) in recipe(r)
         tabstr = repeat(indent, length(deep) + 1)
-        @printf "%s %s(%0.2f[u/s])\n" tabstr item speed
+        @printf "%s %s(%0.2f[u/s])\n" tabstr item speed*r.speed
     end
 end
 Base.show(io::IO, recipe::Recipe) = Base.print(io, recipe)
 Base.show(io::IO, ::MIME"text/plain", recipe::Recipe) = Base.print(io, recipe)
 
-function recipe(item::String, speed=1.0, deep="", G=datatree(); miners=nothing)
-    p_recipe = pre_recipe(item, speed, deep, G; miners=miners)
-    return Recipe{eltype(p_recipe),typeof(G)}(p_recipe, G)
-end
-
-function pre_recipe(item::String, speed=1.0, deep="", G=datatree(); miners=nothing)
+function recipe(item::String, speed=1.0, G=datatree(); miners=nothing)
     if !isnothing(miners)
         speed = topspeed(item, miners, G)
     end
-    p_recipe = [(deep=deep, item=item, speed=speed)]
+    return Recipe{typeof(G)}(item, speed, G)
+end
+
+function recipe(R::Recipe, item::String=R.root, speed=R.speed, deep="", G=R.G)
+    out = [(deep=deep, item=item, speed=speed)]
     alphebet = collect('a':'z')
     # if !istransorraw(item)
     # if !israwmaterial(item)
@@ -45,53 +39,37 @@ function pre_recipe(item::String, speed=1.0, deep="", G=datatree(); miners=nothi
         for (i, next_item) in enumerate(neighborhood)
             loc_speed = speed * G[item, next_item]
             loc_deep = deep * alphebet[i]
-            append!(p_recipe, pre_recipe(next_item, loc_speed, loc_deep, G))
+            append!(out, recipe(R, next_item, loc_speed, loc_deep))
         end
     end
-    return p_recipe
+    return out
 end
 
 function (R::Recipe{T})(item, del...;
                         include=[], delete=[], full=true, split=nothing) where T
-    rec = recipe(R)
-    previous_steps = read_steps(rec, item)
-    append!(delete, del), unique!(delete)
-    subtitle = clear_steps!(previous_steps, rec, include, delete)
-    if isempty(previous_steps)
-        return nothing
+    costs = vertex_costs(R.G, R.root, item)
+    if item == R.root
+        costs = Dict(item => 1)
     end
-    tags, speeds = first.(previous_steps), last.(previous_steps)
-    total = sum(speeds)
-    title = @sprintf "Needs %s(%0.2f[u/s]" item total 
+    # @show costs
+    # @show sum(values(costs))
+
+    names, speeds = keys(costs), values(costs)
+    total = sum(speeds; init = 0)
+    d, frac = approximate_with_fractions(speeds ./ total)
+    speeds_sources = [R.speed*vertex_cost(R.G, R.root, it) for it in names]
+
+    title = @sprintf "Needs %s(%0.2f[u/s]" item R.speed*total 
     if israwmaterial(item)
         # title *= @sprintf " miners: %0.2f" total/PRODUCTION_SPEED
         title *= @sprintf " miners: %i" ceil(Int, total/PRODUCTION_SPEED)
     end
     title *= ") to produce:"
+    subtitle = @sprintf "-- Goal %s at (%0.2f[u/s])\n" R.root R.speed
 
-    d, frac = approximate_with_fractions(speeds ./ total)
-    if !(isnothing(split))
-        new_frac = approximate_with_fractions_splited(split, speeds ./ total)
-        println(new_frac)
-        for I in split
-            for (j, i) in enumerate(I)
-                # frac[i] = new_frac[I][2][j]
-                println(new_frac[I][2][j])
-            end
-        end
-    end
-
-    speeds_sources = [cost(rec, it) for it in tags]
-
-    del_notes = ""
-    if !isempty(include) || !isempty(delete)
-        c = cost(rec, item)
-        del_notes *= " (actual cost $(c)u/s ($(c - total) plus))." 
-    end
-
-    if length(previous_steps) == 1
-        @printf "%s >> %s(%0.2f[u/s]).\n" title first(tags) first(speeds_sources)
-        print(subtitle * del_notes)
+    if length(costs) == 1
+        @printf "%s >> %s(%0.2f[u/s]).\n" title first(names) first(speeds)*R.speed
+        @printf "%s" subtitle
     else
         result = pretty_table(
             ## row1 are parts, row2 target speeds
@@ -99,9 +77,9 @@ function (R::Recipe{T})(item, del...;
             kwargs_default()...,
             formatters=[(v, i, j) -> (i == 1 ? Int(v) : v)],
             # column_labels          = collect(enumerate(first.(inv_recipe))),
-            column_labels=join.(enumerate(tags)),
+            column_labels=join.(enumerate(names), ["."]),
             show_row_number_column=false,
-            source_notes="Splitting for $(item): $d parts" * del_notes,
+            source_notes="Splitting for $(item): $d parts",
             # subtitle = "split factor $d",
             title=title,
             subtitle=subtitle,
@@ -109,84 +87,9 @@ function (R::Recipe{T})(item, del...;
         result
     end
     if full && !istransraw(item)
-        viewgraph(get_graph(R))(item; speed=total)
+        viewgraph(graph(R))(item; speed=R.speed*total)
     end
 end
 
 (R::Recipe)(; include=[], delete=[], full=true) = 
  (R)(root(R); include=include, delete=delete, full=full)
-
-#### Some utils
-function cost(rec::AbstractVector, item::String)
-    I = findall(step -> step.item == item, rec)
-    return sum(step -> step.speed, rec[I])
-end
-
-isup(step1, step2) = !(length(step1.deep) >= length(step2.deep))
-function get_uptag(rec, i)
-    j = findlast(k -> isup(rec[k], rec[i]), 1:i)
-    up_step = rec[j]
-    return (up_step).item
-end
-
-function push_or_add!(pre_step, tag, sp)
-    i_new = findfirst_in(tag, first.(pre_step))
-    isnew = isnothing(i_new)
-    if isnew
-        push!(pre_step, [tag, sp])
-    else
-        pre_step[i_new][2] += sp
-    end
-end
-
-findall_steps(rec, item) = findall(step -> step.item == item, rec)
-# findall_steps(rec, item) = findall( ==(item), rec)
-
-function read_steps(rec, item)
-    steps = findall_steps(rec, item)
-    _, root, speed = first(rec)
-    previous_steps = []
-    if isempty(steps)
-        @printf "\n -- No need of \"%S\" to produce \"%S\", just relax!\n" item root
-        return previous_steps
-    end
-    if item == root
-        append!(previous_steps, [[root, speed]])
-        return previous_steps
-    end
-    for i in steps
-        ## Speed needed in step i-th comes from item in step (inv_i)-th.
-        tag = get_uptag(rec, i)
-        push_or_add!(previous_steps, tag, rec[i].speed)
-    end
-    return previous_steps
-end
-
-function title_setroot(rec)
-    _, root, speed = first(rec)
-    return @sprintf "-- Goal %s at (%0.2f[u/s])\n" root speed
-end
-
-function clear_steps!(steps, rec, include, delete)
-    title = title_setroot(rec)
-    if !isempty(include)
-        title *= (" (removed: " * join(include, ", ") * ").")
-        include_items = [first(steps[i]) for i in include]
-        filter!(step -> in(step[1], include_items), steps)
-    end
-    if !isempty(delete)
-        title *= (" (removed: " * join(delete, ", ") * ").")
-        delete_items = [first(steps[i]) for i in delete]
-        filter!(step -> !in(step[1], delete_items), steps)
-    end
-    return title
-end
-
-function parse_split!(split, n)
-    for i in 1:n
-        if all(I -> !(i in I), split)
-            push!(split, [i])
-        end
-    end
-    return split
-end

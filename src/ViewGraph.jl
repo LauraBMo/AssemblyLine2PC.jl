@@ -1,5 +1,5 @@
 
-export viewgraph, labels, get_graph
+export viewgraph, labels, graph
 
 using Printf
 using PrettyTables
@@ -8,10 +8,9 @@ struct ViewGraph{T}
     G::T
 end
 
-viewgraph(G) = ViewGraph(G)
-viewgraph() = viewgraph(datatree())
-get_graph(VG::ViewGraph) = getfield(VG, :G)
-labels(VG::ViewGraph) = MetaGraphsNext.labels(get_graph(VG))
+viewgraph(G=datatree()) = ViewGraph(G)
+graph(VG::ViewGraph) = getfield(VG, :G)
+labels(VG::ViewGraph) = MetaGraphsNext.labels(graph(VG))
 
 # Get all vertex labels from the MetaGraph
 function Base.propertynames(VG::ViewGraph)
@@ -29,8 +28,8 @@ end
     header::String = @sprintf "%s(%0.2fu/s)" item speed
 end
 
-collect_path(init_item::String, init_speed::T, G, path = []) where {T} =
-    collect_path!(ShowRecipe(; item = init_item, speed = init_speed), G, path)
+collect_path(init_item::String, init_speed::T, G, path=[]) where {T} =
+    collect_path!(ShowRecipe(; item=init_item, speed=init_speed), G, path)
 
 function collect_path!(R::ShowRecipe, G, path)
     for i in path
@@ -55,21 +54,20 @@ end
 function fuel_summary(R, G)
     makers = vertex_fuel_cost(G, R.item, R.speed)
     per_second = makers / 6
-    miners = nMiners(per_second / 5)
+    miners = nMiners(per_second / PRODUCTION_SPEED)
     summary = @sprintf"Total Fuel: %0.2f refined material u/s; Miners: %s" per_second miners
-    print(Crayon(foreground = :light_blue, bold = true), summary)
+    print(Crayon(foreground=:light_blue, bold=true), summary)
 end
 
-
 function (VG::ViewGraph)(item::String, path...; speed=1.0, miners=nothing)
-    G = get_graph(VG)
+    G = graph(VG)
     if !(isnothing(miners))
         speed = topspeed(item, miners, G)
     end
     R = collect_path(item, speed, G, path)
     table = recipe_table(R, G)
     if isnothing(table)
-        @printf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" real_speed nMiners(real_speed / 5)
+        @printf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" real_speed nMiners(real_speed / PRODUCTION_SPEED)
         return nothing
     end
     prettyrecipe(table, R.header)
@@ -90,12 +88,16 @@ function recipe_table(R::ShowRecipe, data=datatree())
         itspeed = speed * data[name, it]
         # N = nminers(it, itspeed, data)
         # N = nMiners(itspeed/5)
-        newrow = [it itspeed Int(ceil(itspeed)) itspeed itspeed * collect(data[it])...]
+        # newrow = [it itspeed Int(ceil(itspeed)) itspeed itspeed * collect(data[it])...]
+        t = total_material(it, itspeed, data)
+        if israwmaterial(it)
+            t = itspeed
+        end
+        newrow = [it itspeed Int(ceil(itspeed)) itspeed t]
         out = vcat(out, newrow)
     end
     return out
 end
-
 
 ## Make it a macro?
 function highlighters_recipetable(table)
@@ -115,31 +117,35 @@ function highlighters_recipetable(table)
         (data, i, j) -> istransraw(data[i, 1]),
         color
     )
-    hls = [ hl_transrawline(crayon"250"), ]
+    hls = [hl_transrawline(crayon"250"),]
     if size(table, 1) > 1
         append!(hls,
-                [
-                    hl_line(_ord[end], crayon"red"),
-                    hl_line(_ord[end-1], crayon"light_blue"),
-                    hl_item(sorteditems[end], crayon"bold red"),
-                    hl_item(sorteditems[end-1], crayon"bold light_blue"),
-                ])
+            [
+                hl_line(_ord[end], crayon"red"),
+                hl_line(_ord[end-1], crayon"light_blue"),
+                hl_item(sorteditems[end], crayon"bold red"),
+                hl_item(sorteditems[end-1], crayon"bold light_blue"),
+            ])
         reverse!(hls)
     end
     return hls
 end
 
-const LENGTH = 4
+const LENGTH = 5
 # const MATERIAL_HEADERS = raw_materials
 # const MATERIAL_UNITS = fill("u/s", length(MATERIAL_HEADERS))
 
 # const HLENGTH = LENGTH + length(raw_materials)
-const HLENGTH = LENGTH + 7
+# const HLENGTH = LENGTH + 7
+# const HLENGTH = LENGTH
+const HLENGTH = 5
 
 const RECIPE_HEADERS = [
-    ["Item", "Ratio", "Mkrs", "5xPacks", raws1..., raws2...],
+    ["Item", "Ratio", "Mkrs", "5xPacks", "Raws"],
+    # ["Item", "Ratio", "Mkrs", "5xPacks", raws1..., raws2...],
     # ["", "u/s", "count", "packs", MATERIAL_UNITS...],
 ]
+
 const TRANSRAW_HEADERS = [
     ["Raw Material", "Ratio", "number of Miners"],
 ]
@@ -149,7 +155,7 @@ findalltransraw(table) = findall(istransraw, first.(eachrow(table)))
 
 findallradioactive(table) = findall(isradioactive, first.(eachrow(table)))
 
-miner_formatter(columns) = (v, i, j) -> (in(j, columns) ? v : nMiners(v / 5))
+miner_formatter(columns) = (v, i, j) -> (in(j, columns) ? v : nMiners(v / PRODUCTION_SPEED))
 
 function kwargs_default()
     DEFAULT_STYLE = TextTableStyle(;
@@ -164,7 +170,7 @@ function kwargs_default()
     )
     return (
         show_row_number_column=true,
-        row_number_column_label="Num",
+        row_number_column_label=" #",
         style=DEFAULT_STYLE,
         table_format=DEFAULT_FORMAT,
     )
@@ -172,7 +178,7 @@ end
 
 function kwargs_recipetable(table, title="")
     kwargs = kwargs_default()
-    notminers_columns = [1, 2, 3]
+    notminers_columns = [1, 2, 3, 5]
     align = [:l, fill(:r, size(table, 2) - 1)...]
     return (
         title=title,
@@ -198,20 +204,22 @@ end
 function build_transraw_table(recipes)
     _table = Matrix{Any}(undef, 0, length(TRANSRAW_HEADERS[1]))
     for row in eachrow(recipes)
-        total_row = sum(row[(LENGTH+1):end])
-        new_row = [row[1:2]..., nMiners(total_row / 5)]
+        total_row = sum(row[LENGTH])
+        new_row = [row[1], row[2], nMiners(total_row / PRODUCTION_SPEED)]
         _table = vcat(_table, permutedims(new_row))
     end
     return _table
 end
 
-function prettyrecipe(table, title="", notminers_columns=[1, 2, 3])
-    total = sum(table[:, (LENGTH+1):end])
+function prettyrecipe(table, title="", notminers_columns=[1, 2, 3, 5])
+    total = sum(table[:, (LENGTH)])
 
     transraw = findalltransraw(table)
     transraw_table = build_transraw_table(table[transraw, :])
+    # transraw_table = []
 
-    notes = @sprintf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" total nMiners(total / 5)
+    notes = @sprintf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" total nMiners(total / PRODUCTION_SPEED)
+    # notes = ""
 
     if isempty(transraw_table)
         pretty_table(table; kwargs_recipetable(table, title)...,
@@ -219,7 +227,7 @@ function prettyrecipe(table, title="", notminers_columns=[1, 2, 3])
     else
         pretty_table(table; kwargs_recipetable(table, title)...)
         pretty_table(transraw_table; kwargs_transrawtable()...,
-                     source_notes=notes)
+            source_notes=notes)
     end
 end
 
@@ -247,7 +255,7 @@ end
 #     real_item, real_speed, title = get_pathdownwards(G, item, speed, I, miners)
 #     table = subrecipe_table(real_item, subrecipe, real_speed, G)
 #     if isnothing(table)
-#         @printf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" real_speed nMiners(real_speed / 5)
+#         @printf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" real_speed nMiners(real_speed / PRODUCTION_SPEED)
 #         return nothing
 #     end
 #     table = sort_recipe_table(table, G)

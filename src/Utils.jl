@@ -4,15 +4,13 @@ function __summary(j, data, string, fun)
     elseif j == 2
         sum(fun, data[:, j])
     else
-        sum(fun, data[:, j]./5)
+        sum(fun, data[:, j]./PRODUCTION_SPEED)
     end
 end
 my_summary() = [
     (data, j) -> __summary(j, data, "Totals:", x -> x),
     (data, j) -> __summary(j, data, "Ceil Sum:", ceil),
 ]
-
-findfirst_in(haystack, needlecase) = findfirst(needle -> occursin(needle, haystack), needlecase)
 
 function outneighbor_label(G, item, i)
     code = code_for(G, item)
@@ -54,7 +52,7 @@ end
 function find_bestapprox(L, d; kwargs...)
     ## We assume sum(L) == 1 
     approx = [ceil(Int, x * d; kwargs...) for x in L]
-    total = sum(approx)
+    total = sum(approx; init = 0)
     if total > d
         _, i = findmax(approx)
         approx[i] -= (total - d)
@@ -64,7 +62,7 @@ end
 
 function total_error_for_denominator(L, d; kwargs...)
     approx = find_bestapprox(L, d; kwargs...)
-    return sum(abs.(L .- (approx./d)))
+    return sum(abs.(L .- (approx./d)); init = 0)
 end
 
 """
