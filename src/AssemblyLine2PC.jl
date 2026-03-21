@@ -11,6 +11,7 @@ include("BuildData.jl")
 include("ViewGraph.jl")
 include("Recipe.jl")
 include("Costs.jl")
+include("DistributionChain.jl")
 
 export cost, total_material, nminers, topspeed
 
