@@ -9,6 +9,8 @@ graph(R::Recipe) = R.G
 root(R::Recipe) = R.root
 speed(R::Recipe) = R.speed
 
+vertex_costs(R::Recipe, item) = vertex_costs(R.G, R.root, item)
+vertex_cost(R::Recipe, item) = vertex_cost(R.G, R.root, item)
 function resetspeed!(R::Recipe, newspeed)
     R.speed = newspeed
 end
@@ -16,11 +18,12 @@ end
 function Base.print(io::IO, r::Recipe; indent="*", kwargs...)
     for (deep, item, speed) in recipe(r)
         tabstr = repeat(indent, length(deep) + 1)
-        @printf "%s %s(%0.2f[u/s])\n" tabstr item speed*r.speed
+        @printf "%s %s(%0.2f[u/s])\n" tabstr item speed * r.speed
     end
 end
 Base.show(io::IO, recipe::Recipe) = Base.print(io, recipe)
 Base.show(io::IO, ::MIME"text/plain", recipe::Recipe) = Base.print(io, recipe)
+
 
 function recipe(item::String, speed=1.0, G=datatree(); miners=nothing)
     if !isnothing(miners)
@@ -45,9 +48,8 @@ function recipe(R::Recipe, item::String=R.root, speed=R.speed, deep="", G=R.G)
     return out
 end
 
-function (R::Recipe{T})(item, del...;
-                        include=[], delete=[], full=true, split=nothing) where T
-    costs = vertex_costs(R.G, R.root, item)
+function (R::Recipe)(item; full=true, group=nothing)
+    costs = vertex_costs(R, item)
     if item == R.root
         costs = Dict(item => 1)
     end
@@ -55,41 +57,60 @@ function (R::Recipe{T})(item, del...;
     # @show sum(values(costs))
 
     names, speeds = keys(costs), values(costs)
-    total = sum(speeds; init = 0)
-    d, frac = approximate_with_fractions(speeds ./ total)
-    speeds_sources = [R.speed*vertex_cost(R.G, R.root, it) for it in names]
+    total = sum(speeds; init=0)
+    # d, frac = approximate_with_fractions(speeds ./ total)
+    speeds_sources = [R.speed * vertex_cost(R, it) for it in names]
 
-    title = @sprintf "Needs %s(%0.2f[u/s]" item R.speed*total 
+    title = @sprintf "Needs %s(%0.2f[u/s]" item R.speed * total
     if israwmaterial(item)
         # title *= @sprintf " miners: %0.2f" total/PRODUCTION_SPEED
-        title *= @sprintf " miners: %i" ceil(Int, total/PRODUCTION_SPEED)
+        title *= @sprintf " miners: %i" ceil(Int, R.speed * total / PRODUCTION_SPEED)
     end
     title *= ") to produce:"
     subtitle = @sprintf "-- Goal %s at (%0.2f[u/s])\n" R.root R.speed
 
     if length(costs) == 1
-        @printf "%s >> %s(%0.2f[u/s]).\n" title first(names) first(speeds)*R.speed
+        @printf "%s >> %s(%0.2f[u/s]).\n" title first(names) R.speed * first(speeds)
         @printf "%s" subtitle
     else
+        _data = permutedims(hcat(collect(speeds), speeds_sources))
+        kwagrs = kwargs_default()
+        if !isnothing(group)
+            nn = length(group)
+            _data = permute_to_front(_data, group, 2)
+            _labels=join.(enumerate(names), ["."])
+            _labels = permute_to_front(_labels, group)
+
+            _data[1, 1] = sum(_data[1, 1:nn])
+            # _data[1, 2:nn] .= 0.0
+
+            l1 = join(_labels[1:nn], "+")
+            # println(nn, _labels, _data, l1)
+            kwagrs = (kwagrs...,
+                      column_labels=[[MultiColumn(nn, l1), _labels[(nn+1):end]...]],
+                      merge_column_label_cells=:auto,
+                      formatters=[(v, i, j) -> (i == 1 ? Int(v) : v),
+                                  (v, i, j) -> ((i == 1 && j in 2:nn) ? "_" : v),
+                                  ],
+            )
+        end
         result = pretty_table(
-            ## row1 are parts, row2 target speeds
-            permutedims(hcat(frac, speeds_sources));
-            kwargs_default()...,
-            formatters=[(v, i, j) -> (i == 1 ? Int(v) : v)],
-            # column_labels          = collect(enumerate(first.(inv_recipe))),
+            _data;
             column_labels=join.(enumerate(names), ["."]),
+            formatters=[(v, i, j) -> (i == 1 ? Int(v) : v)],
+            kwagrs...,
             show_row_number_column=false,
-            source_notes="Splitting for $(item): $d parts",
-            # subtitle = "split factor $d",
+            source_notes="Splitting for $(item): $(sum(speeds)) parts",
             title=title,
             subtitle=subtitle,
         )
         result
     end
     if full && !istransraw(item)
-        viewgraph(graph(R))(item; speed=R.speed*total)
+        viewgraph(graph(R))(item; speed=R.speed * total)
     end
 end
 
-(R::Recipe)(; include=[], delete=[], full=true) = 
- (R)(root(R); include=include, delete=delete, full=full)
+(R::Recipe)(; full=true, group=nothing) =
+    (R)(root(R); full=full, group = group)
+

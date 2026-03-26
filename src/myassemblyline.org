@@ -26,10 +26,22 @@ AL2.resetspeed!(curr, 2.7)
 
 #+RESULTS:
 
-* Build graph
+* Build data graph
 #+begin_src julia
 viewg = AL2.viewgraph()
 viewg(kk.Circuit; miners = N)
+
+#+end_src
+* Optimize ratios via graph
+
+#+begin_src julia
+
+tree = [[2, 3, (4, 5)], [(5, 2), (6, 1)], [7, (8, 4), (9, 6)], [], [], [], [(10, 7), (11, 3)]]
+
+gr_ass = AL2.parse_chain(curr, kk.Circuit, tree)
+
+AL2.findmin_ap(gr_ass)
+
 
 #+end_src
 

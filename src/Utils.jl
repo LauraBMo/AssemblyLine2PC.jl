@@ -1,3 +1,22 @@
+
+"""
+    permute_to_front(A, I, dim) -> Array
+
+Reorder the slices of array `A` along dimension `dim` so that the indices
+`I = [i1, ..., ik]` come first (in the given order), followed by the
+remaining indices in their original relative order.
+"""
+function permute_to_front(A::AbstractArray, I::AbstractVector{Int}, dim=1)
+    n = size(A, dim)
+
+    remaining = setdiff(1:n, I) # indices NOT in I, original order
+    new_order = vcat(I, remaining) # I-first ordering
+
+    # Build a full index tuple: `:` for every dim except `dim`
+    idx = ntuple(d -> d == dim ? new_order : Colon(), ndims(A))
+    return A[idx...]
+end
+
 function __summary(j, data, string, fun)
     if j == 1
         string
@@ -49,52 +68,52 @@ function vertex_total_cost(G, v, cost = zero(Int))
     return cost
 end
 
-function find_bestapprox(L, d; kwargs...)
-    ## We assume sum(L) == 1 
-    approx = [ceil(Int, x * d; kwargs...) for x in L]
-    total = sum(approx; init = 0)
-    if total > d
-        _, i = findmax(approx)
-        approx[i] -= (total - d)
-    end
-    return approx
-end
+# function find_bestapprox(L, d; kwargs...)
+#     ## We assume sum(L) == 1 
+#     approx = [ceil(Int, x * d; kwargs...) for x in L]
+#     total = sum(approx; init = 0)
+#     if total > d
+#         _, i = findmax(approx)
+#         approx[i] -= (total - d)
+#     end
+#     return approx
+# end
 
-function total_error_for_denominator(L, d; kwargs...)
-    approx = find_bestapprox(L, d; kwargs...)
-    return sum(abs.(L .- (approx./d)); init = 0)
-end
+# function total_error_for_denominator(L, d; kwargs...)
+#     approx = find_bestapprox(L, d; kwargs...)
+#     return sum(abs.(L .- (approx./d)); init = 0)
+# end
 
-"""
-    approximate_with_fractions(L, denominators; kwargs...)
+# """
+#     approximate_with_fractions(L, denominators; kwargs...)
 
-Create rational approximations for list `L` using the best denominator from `denominators`.
+# Create rational approximations for list `L` using the best denominator from `denominators`.
 
-Additional keyword arguments are passed to `ceil` in `find_bestapprox`.
-"""
-function approximate_with_fractions(L, denominators = collect(1:100);
-                                    error = total_error_for_denominator,
-                                    kwargs...)
-    # Find the optimal denominator
-    _, i = findmin(d -> error(L, d; kwargs...), denominators)
-    best_d = denominators[i]
+# Additional keyword arguments are passed to `ceil` in `find_bestapprox`.
+# """
+# function approximate_with_fractions(L, denominators = collect(1:100);
+#                                     error = total_error_for_denominator,
+#                                     kwargs...)
+#     # Find the optimal denominator
+#     _, i = findmin(d -> error(L, d; kwargs...), denominators)
+#     best_d = denominators[i]
     
-    # Create fractions using the best denominator
-    best_d, find_bestapprox(L, best_d; kwargs...)
-end
+#     # Create fractions using the best denominator
+#     best_d, find_bestapprox(L, best_d; kwargs...)
+# end
 
-function approximate_with_fractions_splited(split, L, denominators = collect(1:100);
-                                            error = total_error_for_denominator,
-                                            kwargs...)
-    out = Dict()
-    full_split = parse_split!(split, length(L))
-    for I in full_split
-        push!(out,
-              I => approximate_with_fractions(L[I])
-              )
-    end
-    return out
-end
+# function approximate_with_fractions_splited(split, L, denominators = collect(1:100);
+#                                             error = total_error_for_denominator,
+#                                             kwargs...)
+#     out = Dict()
+#     full_split = parse_split!(split, length(L))
+#     for I in full_split
+#         push!(out,
+#               I => approximate_with_fractions(L[I])
+#               )
+#     end
+#     return out
+# end
 
 ################ No Need #######################
 # hasvertex_simplemetadata(g, v) = isless(0, tier(g, v))
