@@ -1,49 +1,37 @@
 ```
 # Julia-specific ignores
+.julia/
 *.ji
 *.jl.cov
-*.jl.mem
-.julia/
+*.jl.so
 
 # Dependencies
-.julia/
 deps/build.log
 
-# General build artifacts
-build/
-dist/
-*.so
-*.dylib
-*.dll
+# Coverage
+coverage/
 
-# Environment and cache
+# Build/test artifacts
+*.res
+
+# Environment
 .env
 .env.local
-.env.*
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.env.*
 
-# Logs
-*.log
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Editors
+# Editors/IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
 *.tmp
-
-# Coverage
-coverage/
-htmlcov/
-.coverage
-
-# MyPy
-.mypy_cache/
 ```
