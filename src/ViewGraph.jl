@@ -1,8 +1,5 @@
 
-export viewgraph, labels, graph
-
-using Printf
-using PrettyTables
+export viewgraph
 
 struct ViewGraph{T}
     G::T
@@ -12,33 +9,32 @@ viewgraph(G=datatree()) = ViewGraph(G)
 graph(VG::ViewGraph) = getfield(VG, :G)
 labels(VG::ViewGraph) = MetaGraphsNext.labels(graph(VG))
 
-# Get all vertex labels from the MetaGraph
-function Base.propertynames(VG::ViewGraph)
-    return tuple(Symbol.(labels(VG)))
-end
+# # Get all vertex labels from the MetaGraph
+# function Base.propertynames(VG::ViewGraph)
+#     return tuple(Symbol.(labels(VG)))
+# end
 
-# Access vertices by property
-function Base.getproperty(VG::ViewGraph, name::Symbol)
-    return VG(string(name))
-end
+# # Access vertices by property
+# function Base.getproperty(VG::ViewGraph, name::Symbol)
+#     return VG(string(name))
+# end
 
 @kwdef mutable struct ShowRecipe{T}
-    item::String = "AIRobot"
-    speed::T = 1.0
+    item::String
+    speed::T
     header::String = @sprintf "%s(%0.2fu/s)" item speed
 end
 
-collect_path(init_item::String, init_speed::T, G, path=[]) where {T} =
-    collect_path!(ShowRecipe(; item=init_item, speed=init_speed), G, path)
+showrecipe(root::String, speed, G, path=[]) =
+    showrecipe!(ShowRecipe(; item=root, speed=speed), G, path)
 
-function collect_path!(R::ShowRecipe, G, path)
+function showrecipe!(R::ShowRecipe, G, path)
     for i in path
         next_item = outneighbor_label(G, R.item, i)
-        rate = G[R.item, next_item]
-        iterate!(R, next_item, rate)
+        iterate!(R, next_item, G[R.item, next_item])
     end
     R.header *= ":"
-    return R
+    return R.item, R.speed, R.header
 end
 
 function iterate!(R::ShowRecipe, next_item, rate)
@@ -51,251 +47,105 @@ function iterate!(R::ShowRecipe, next_item, rate)
     end
 end
 
-function fuel_summary(R, G)
-    makers = vertex_fuel_cost(G, R.item, R.speed)
-    per_second = makers / 6
-    miners = nMiners(per_second / PRODUCTION_SPEED)
-    summary = @sprintf"Total Fuel: %0.2f refined material u/s; Miners: %s" per_second miners
-    print(Crayon(foreground=:light_blue, bold=true), summary)
-end
+# function fuel_summary(R, G)
+#     makers = vertex_fuel_cost(G, R.item, R.speed)
+#     per_second = makers / 6
+#     miners = nMiners(per_second / (5*GAME_FACTOR))
+#     summary = @sprintf "Total Fuel: %0.2f refined material u/s; Miners: %s" per_second miners
+#     print(Crayon(foreground=:light_blue, bold=true), summary)
+# end
 
-function (VG::ViewGraph)(item::String, path...; speed=1.0, miners=nothing)
+function (VG::ViewGraph)(root::String, path...; speed=1.0, miners=nothing, npacks=5)
     G = graph(VG)
     if !(isnothing(miners))
-        speed = topspeed(item, miners, G)
+        speed = topspeed(G, root, miners)
     end
-    R = collect_path(item, speed, G, path)
-    table = recipe_table(R, G)
-    if isnothing(table)
-        @printf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" real_speed nMiners(real_speed / PRODUCTION_SPEED)
-        return nothing
+    item, item_speed, header = showrecipe(root, speed, G, path)
+    table, notes = recipe_table(item, item_speed, npacks, G)
+
+    I = findalltransraw(table)
+    if isempty(I)
+        pretty_table(table;
+                     kwargs_recipetable(table, header, npacks)...,
+                     source_notes=notes)
+    elseif length(I) == size(table, 1)
+        pretty_table(build_transraw_table(table[I, :]);
+                     kwargs_transrawtable()...,
+                     source_notes=notes)
+    else
+        pretty_table(table; kwargs_recipetable(table, header, npacks)...)
+        pretty_table(build_transraw_table(table[I, :]);
+                     kwargs_transrawtable()...,
+                     source_notes=notes)
     end
-    prettyrecipe(table, R.header)
-    fuel_summary(R, G)
+    # fuel_summary(R, G)
 end
 
-function recipe_table(R::ShowRecipe, data=datatree())
-    # header = ["Component", "Rate", "Makers"; tracked materials...]
-    name = R.item
-    speed = R.speed
-    out = Matrix{Any}(undef, 0, HLENGTH)
-    recipe = outneighbor_labels(data, name)
-    # wide = maximum(length, recipe)
+const LENGTH = 5
+function recipe_table(item, speed, n=5, G=datatree())
+    recipe = collect(outneighbor_labels(G, item))
+    total = speed
+    if !israw(item)
+        total *= raw_cost(G, item)
+    end
+    notes = @sprintf "TOTAL: %5.2fu of raw-material; Requires: %s Starters" total nMiners(total / (5 * GAME_FACTOR))
+
+    out = Matrix{Any}(undef, 0, LENGTH)
+    # newrow = [it  ## Name
+    #           it_speed ## Ratio
+    #           ceil(Int, it_speed/GAME_FACTOR) ## Makers
+    #           it_speed/(n*GAME_FACTOR) ## Packs of makers
+    #           round(Int, raws) ## Cost in raw materials
+    #           ]
+    newrow(item, speed, n, total) =
+        [item speed ceil(Int, speed/GAME_FACTOR) speed/(n*GAME_FACTOR) round(Int, total)]
     if isempty(recipe)
-        return nothing
+        out = newrow(item, speed, n, total)
     end
     for it in recipe
-        itspeed = speed * data[name, it]
-        # N = nminers(it, itspeed, data)
-        # N = nMiners(itspeed/5)
-        # newrow = [it itspeed Int(ceil(itspeed)) itspeed itspeed * collect(data[it])...]
-        t = total_material(it, itspeed, data)
-        if israwmaterial(it)
-            t = itspeed
+        it_speed = speed * G[item, it]
+        raws = it_speed
+        if !israw(it)
+            raws *= raw_cost(G, it)
         end
-        newrow = [it itspeed Int(ceil(itspeed)) itspeed t]
-        out = vcat(out, newrow)
+        out = vcat(out, newrow(it, it_speed, n, raws))
+    end
+    return out, notes
+end
+
+const RLENGTH = 4
+function build_transraw_table(recipes)
+    out = Matrix{Any}(undef, 0, RLENGTH)
+    for row in eachrow(recipes)
+        new_row = [row[1] row[2] ceil(Int, row[2] / GAME_FACTOR) row[LENGTH] / (5 * GAME_FACTOR)]
+        out = vcat(out, new_row)
     end
     return out
 end
 
-## Make it a macro?
-function highlighters_recipetable(table)
-    _ord = sortperm(map(row -> sum(row[3:end]), eachrow(table)))
-    sorteditems = table[:, 1][_ord]
-    hl_item(string, color) = TextHighlighter(
-        (data, i, j) -> (data[i, j] == string),
-        color
-    )
-
-    hl_line(n, color) = TextHighlighter(
-        (data, i, j) -> (i == n),
-        color
-    )
-
-    hl_transrawline(color) = TextHighlighter(
-        (data, i, j) -> istransraw(data[i, 1]),
-        color
-    )
-    hls = [hl_transrawline(crayon"250"),]
-    if size(table, 1) > 1
-        append!(hls,
-            [
-                hl_line(_ord[end], crayon"red"),
-                hl_line(_ord[end-1], crayon"light_blue"),
-                hl_item(sorteditems[end], crayon"bold red"),
-                hl_item(sorteditems[end-1], crayon"bold light_blue"),
-            ])
-        reverse!(hls)
-    end
-    return hls
-end
-
-const LENGTH = 5
-# const MATERIAL_HEADERS = raw_materials
-# const MATERIAL_UNITS = fill("u/s", length(MATERIAL_HEADERS))
-
-# const HLENGTH = LENGTH + length(raw_materials)
-# const HLENGTH = LENGTH + 7
-# const HLENGTH = LENGTH
-const HLENGTH = 5
-
-const RECIPE_HEADERS = [
-    ["Item", "Ratio", "Mkrs", "5xPacks", "Raws"],
-    # ["Item", "Ratio", "Mkrs", "5xPacks", raws1..., raws2...],
-    # ["", "u/s", "count", "packs", MATERIAL_UNITS...],
-]
-
-const TRANSRAW_HEADERS = [
-    ["Raw Material", "Ratio", "number of Miners"],
-]
-
-istransraw(name) = (israwmaterial(name) || istransformer(name))
-findalltransraw(table) = findall(istransraw, first.(eachrow(table)))
-
-findallradioactive(table) = findall(isradioactive, first.(eachrow(table)))
-
-miner_formatter(columns) = (v, i, j) -> (in(j, columns) ? v : nMiners(v / PRODUCTION_SPEED))
-
-function kwargs_default()
-    DEFAULT_STYLE = TextTableStyle(;
-        first_line_column_label=crayon"bold",
-        source_note=crayon"bold light_blue",
-    )
-    DEFAULT_FORMAT = TextTableFormat(;
-        @text__no_vertical_lines,
-        # vertical_line_after_row_number_column = true
-        vertical_line_after_continuation_column=true,
-        vertical_line_at_beginning=true,
-    )
+function kwargs_recipetable(table, title="", n=5)
     return (
-        show_row_number_column=true,
-        row_number_column_label=" #",
-        style=DEFAULT_STYLE,
-        table_format=DEFAULT_FORMAT,
-    )
-end
-
-function kwargs_recipetable(table, title="")
-    kwargs = kwargs_default()
-    notminers_columns = [1, 2, 3, 5]
-    align = [:l, fill(:r, size(table, 2) - 1)...]
-    return (
+        kwargs_default()...,
         title=title,
-        column_labels=RECIPE_HEADERS,
-        alignment=align,
-        formatters=[miner_formatter(notminers_columns)],
+        column_labels=[
+            ["Item", "Ratio", "Mkrs", "$(n)xPacks", "Raws"],
+        ],
+        alignment=[:l, fill(:r, LENGTH - 1)...],
+        formatters=[miner_formatter([4])],
         highlighters=highlighters_recipetable(table),
         summary_rows=my_summary(),
         summary_row_labels=["", ""],
-        kwargs...
     )
 end
 
 function kwargs_transrawtable()
-    kwargs = kwargs_default()
-    return (kwargs...,
+    return (
+        kwargs_default()...,
         title="Transformers & Raw Materials",
-        column_labels=TRANSRAW_HEADERS,
-        alignment=[:l, :r, :r],
+        column_labels=[
+            ["Materials", "Ratio", "Mkrs", "nStarters"],
+        ],
+        formatters=[miner_formatter([4])],
+        alignment=[:l, fill(:r, RLENGTH - 1)...],
     )
 end
-
-function build_transraw_table(recipes)
-    _table = Matrix{Any}(undef, 0, length(TRANSRAW_HEADERS[1]))
-    for row in eachrow(recipes)
-        total_row = sum(row[LENGTH])
-        new_row = [row[1], row[2], nMiners(total_row / PRODUCTION_SPEED)]
-        _table = vcat(_table, permutedims(new_row))
-    end
-    return _table
-end
-
-function prettyrecipe(table, title="", notminers_columns=[1, 2, 3, 5])
-    total = sum(table[:, (LENGTH)])
-
-    transraw = findalltransraw(table)
-    transraw_table = build_transraw_table(table[transraw, :])
-    # transraw_table = []
-
-    notes = @sprintf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" total nMiners(total / PRODUCTION_SPEED)
-    # notes = ""
-
-    if isempty(transraw_table)
-        pretty_table(table; kwargs_recipetable(table, title)...,
-            source_notes=notes)
-    else
-        pretty_table(table; kwargs_recipetable(table, title)...)
-        pretty_table(transraw_table; kwargs_transrawtable()...,
-            source_notes=notes)
-    end
-end
-
-# using Printf
-# function show_recipe(name, speed=one(Int), data=datatree())
-#     # print("Recipe for $(name) at $(speed)u/s\n")
-#     @printf "Recipe for %s at %0.2fu/s: Crafts & Miners\n" name speed
-#     recipe = outneighbor_labels(data, name)
-#     wide = maximum(length, recipe)
-#     for it in recipe
-#         itspeed = speed*data[name, it]
-#         # N = float(MinerNumbers.number(nminers(it, itspeed, data)))
-#         N = nminers(it, itspeed, data)
-#         # print("|_> $(it) at $(itspeed): $(ceil(itspeed)) craft, $(N) Miners\n")
-#         @printf "|_> %-*s(%5.2f u/s): %02d Mkr and %s Mi\n" wide it itspeed ceil(itspeed) N
-#     end
-# end
-
-# ## Total cost of items in subrecipe = [2,3] for item at level 'I' onforward.
-# ## TODO TODO
-# ## TODO TODO
-# function (VG::ViewGraph)(item::String, subrecipe::AbstractVector{Int}, I...;
-#     speed=one(Int), miners=nothing)
-#     G = graph(VG)
-#     real_item, real_speed, title = get_pathdownwards(G, item, speed, I, miners)
-#     table = subrecipe_table(real_item, subrecipe, real_speed, G)
-#     if isnothing(table)
-#         @printf "TOTAL: %5.2fu of raw-material; Requires: %s Miners" real_speed nMiners(real_speed / PRODUCTION_SPEED)
-#         return nothing
-#     end
-#     table = sort_recipe_table(table, G)
-#     prettyrecipe(table, title)
-#     fuel_summary(G, item)
-# end
-
-# function subrecipe_table(name, subrecipe, speed=one(Int), data=datatree())
-#     # header = ["Component", "Rate", "Makers"; "Gold",...]
-#     table = recipe_table(name, speed, data)
-#     for i in subrecipe
-#         it = outneighbor_label(data, name, i)
-#         itspeed = speed * data[name, it]
-#         new_table = recipe_table(it, itspeed, data)
-#         table = add_recipe_table(table, new_table)
-#     end
-#     return table
-# end
-
-# function sort_recipe_table(table, data)
-#     rows = collect(eachrow(table))
-#     sort!(rows, by=x -> vertex_high(data, first(x)))
-#     out = Matrix{Any}(undef, HLENGTH, 0)
-#     out = reduce(hcat, rows; init=out)
-#     return permutedims(out)
-# end
-
-# function add_recipe_table(table1, table2)
-#     out = table1
-#     intable1(str) = findfirst(==(str), first(eachrow(table1)))
-#     for newrow in eachrow(table2)
-#         name = first(newrow)
-#         isintable1 = intable1(name)
-#         if isnothing(isintable1)
-#             out = vcat(out, permutedims(newrow))
-#         else
-#             out[isintable1, 2:end] += newrow[2:end]
-#         end
-#     end
-#     return out
-# end
-# ## TODO TODO
-# ## TODO TODO

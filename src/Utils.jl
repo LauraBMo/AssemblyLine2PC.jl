@@ -23,7 +23,7 @@ function __summary(j, data, string, fun)
     elseif j == 2
         sum(fun, data[:, j])
     else
-        sum(fun, data[:, j]./PRODUCTION_SPEED)
+        sum(fun, data[:, j]./(5*GAME_FACTOR))
     end
 end
 my_summary() = [

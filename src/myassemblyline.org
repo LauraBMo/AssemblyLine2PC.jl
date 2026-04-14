@@ -7,9 +7,9 @@ import AssemblyLine2PC as AL2
 # using GraphPlot, Plots
 # g = AL2.datatree()
 ## Current starters limit
-N = 405+60*2
+N = 460+70*2
 kk = AL2.autocomplete_keys();
-VG = AL2.viewgraph();
+# VG = AL2.viewgraph();
 
 ## Use as: (to get autocompletion with kk.Ex<tab>)
 # VG(kk.Explosive; speed = 15)
@@ -19,8 +19,8 @@ VG = AL2.viewgraph();
 # AL2.resetspeed!(ncell, 8.5)
 
 # ncircuit = AL2.recipe(kk.NCircuit; miners=N);
-curr = AL2.recipe("NProcessor"; miners=N);
-AL2.resetspeed!(curr, 2.7)
+curr = AL2.recipe(kk.AIRBomber; miners=N);
+# AL2.resettarget!(curr, 0.33)
 
 #+end_src
 

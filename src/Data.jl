@@ -1,81 +1,70 @@
 # Complete Assembly Line 2 Crafting Tree Dictionary
 
 # ==================== RAW MATERIALS ====================
-const raws1 = ["Gold", "Diamond", "Iron", "Copper", "Aluminum"]
-const raws2 = ["Uranium", "Plutonium"]
+israw(string) = in(string, RAWS)
+function rawrecipes(raws = RAWS)
+    recipes = []
+    for raw in raws
+        push!(recipes, raw => Dict(raw => 1))
+    end
+    return Dict(recipes)
+end
 
+const TRANSFORMERS_SPLIT = ":"
+trans(type, raw) = type * TRANSFORMERS_SPLIT * raw 
+splittrans(string) = split(string, TRANSFORMERS_SPLIT)
 
-"""
-    raw_materials
+isradio(item; radio_items = [keys(rmk1)..., keys(rmk2)...]) = in(item, radio_items)
 
-String ordered vector of raw resources that anchor all cost tuples produced by
-AssemblyLine2PC.jl.
-"""
-const raw_materials = vcat(raws1, raws2)
-
-israwmaterial(string) = any(==(string), raw_materials)
-
-
-const transformers_types = ["Wire", "Liquid", "Gear", "Plate"]
-const transformers_split = "."
-trans_concat(type, raw; split = transformers_split) = type * split * raw 
-
-## Cable, Refined (missing)
-# transformers_names = ["WMaker", "Furnace", "Cutter", "CMaker", "HPress", "Refinery"]
-# transformers_dict = transformers_types .=> transformers_names
+istrans(item; trans_items = [keys(transrecipes())...]) = in(item, trans_items)
+istransraw(string) = istrans(string) || israw(string)
 
 # ==================== BASIC COMPONENTS ====================
-function recipes_transformers(raw = raws1,
-                              refined = raws2,
-                              transformers = transformers_types)
-    recipes = Dict()
-    for (type, material) in Iterators.product(transformers, raw)
-        name = trans_concat(type, material)
+function transrecipes(raws = RAWS,
+                      # refined = raws_radio,
+                      transformers = ["Wire", "Liquid", "Gear", "Plate"],
+                      )
+    recipes = []
+    for (type, material) in Iterators.product(transformers, raws)
+        name = trans(type, material)
         push!(recipes, name => Dict(material => 1))
     end
     # Add Cable version (slightly different)
-    for material in raw
-        name = trans_concat("Cable", material)
-        ingredient = trans_concat("Wire", material) 
-        push!(recipes,
-            name => Dict(ingredient => 3))
+    for material in raws
+        name = trans("Cable", material)
+        ingredient = trans("Wire", material) 
+        push!(recipes, name => Dict(ingredient => 3))
     end
     # Add Refinery version (slightly different)
-    for material in refined
-        name = trans_concat("Refined", material)
-        ingredient = material
-        push!(recipes,
-            name => Dict(ingredient => 1))
-    end
-    return recipes
+    # for material in refined
+    #     name = trans("Refined", material)
+    #     ingredient = material
+    #     push!(recipes,
+    #         name => Dict(ingredient => 1))
+    # end
+    return Dict(recipes)
 end
-
-const transformer_items = collect(keys(recipes_transformers()))
-istransformer(string) = in(string, transformer_items)
-istransorraw(string) = istransformer(string) || israwmaterial(string)
-splittransformer(string) = split(string, transformers_split)
-
 
 # ==================== MAKERS RECIPES ====================
 mk1 = Dict(
     "Battery" => Dict(
         "Copper" => 1,
-        trans_concat("Liquid", "Copper") => 2,
+        trans("Liquid", "Copper") => 2,
     ),
     "Circuit" => Dict(
         "Gold" => 2,
-        trans_concat("Wire", "Copper") => 1,
+        trans("Wire", "Copper") => 1,
     ),
     "ElectricBoard" => Dict(
-        trans_concat("Wire", "Copper") => 3,
+        trans("Wire", "Copper") => 3,
         "Aluminum" => 2,
     ),
     "Engine" => Dict(
-        trans_concat("Gear", "Iron") => 2,
+        trans("Gear", "Iron") => 2,
         "Gold" => 2,
     ),
     "Heater" => Dict(
-        trans_concat("Wire", "Iron") => 2,
+        trans("Wire", "Iron") => 2,
         "Aluminum" => 4,
     ),
     "ServerRack" => Dict(
@@ -83,7 +72,7 @@ mk1 = Dict(
         "Iron" => 3,
     ),
     "SolarCell" => Dict(
-        trans_concat("Liquid", "Diamond") => 1,
+        trans("Liquid", "Diamond") => 1,
         "Gold" => 2,
     ),
 )
@@ -101,23 +90,23 @@ mk2 = Dict(
     ),
     "Fan" => Dict(
         "Circuit" => 2,
-        trans_concat("Gear", "Diamond") => 4,
+        trans("Gear", "Diamond") => 4,
         "Aluminum" => 6,
     ),
     "Laser" => Dict(
         "Battery" => 6,
         "Heater" => 6,
-        trans_concat("Liquid", "Iron") => 6,
+        trans("Liquid", "Iron") => 6,
     ),
     "PowerSupply" => Dict(
         "Circuit" => 1,
         "Diamond" => 6,
-        trans_concat("Liquid", "Aluminum") => 6,
+        trans("Liquid", "Aluminum") => 6,
     ),
     "Processor" => Dict(
         "Circuit" => 2,
-        trans_concat("Liquid", "Gold") => 4,
-        trans_concat("Wire", "Diamond") => 4,
+        trans("Liquid", "Gold") => 4,
+        trans("Wire", "Diamond") => 4,
     ),
     "SolarPanel" => Dict(
         "SolarCell" => 1,
@@ -128,7 +117,7 @@ mk2 = Dict(
         "Computer" => 2,
         "ServerRack" => 6,
         "Circuit" => 6,
-        trans_concat("Cable", "Gold") => 6,
+        trans("Cable", "Gold") => 6,
     ),
 )
 
@@ -136,19 +125,19 @@ mk3 = Dict(
     "AIProcessor" => Dict(
         "Circuit" => 5,
         "SuperComputer" => 3,
-        trans_concat("Plate", "Copper") => 10,
-        trans_concat("Cable", "Copper") => 10,
+        trans("Plate", "Copper") => 10,
+        trans("Cable", "Copper") => 10,
     ),
     "AIRobot" => Dict(
         "AIRobotBody" => 1,
         "AIRobotHead" => 1,
-        trans_concat("Plate", "Iron") => 15,
-        trans_concat("Cable", "Diamond") => 10,
+        trans("Plate", "Iron") => 15,
+        trans("Cable", "Diamond") => 10,
     ),
     "AIRobotArms" => Dict(
         "Laser" => 3,
-        trans_concat("Plate", "Aluminum") => 6,
-        trans_concat("Cable", "Aluminum") => 6,
+        trans("Plate", "Aluminum") => 6,
+        trans("Cable", "Aluminum") => 6,
         "Iron" => 10,
     ),
     "AIRobotBody" => Dict(
@@ -159,20 +148,20 @@ mk3 = Dict(
     ),
     "AIRobotHead" => Dict(
         "AIProcessor" => 1,
-        trans_concat("Plate", "Gold") => 10,
-        trans_concat("Cable", "Diamond") => 5,
+        trans("Plate", "Gold") => 10,
+        trans("Cable", "Diamond") => 5,
         "Circuit" => 15,
     ),
     "ElectricEngine" => Dict(
         "Battery" => 5,
         "AdvancedEngine" => 2,
         "ElectricBoard" => 6,
-        trans_concat("Plate", "Iron") => 6,
+        trans("Plate", "Iron") => 6,
     ),
     "Explosive" => Dict(
         "Circuit" => 5,
-        trans_concat("Wire", "Diamond") => 10,
-        trans_concat("Cable", "Copper") => 10,
+        trans("Wire", "Diamond") => 10,
+        trans("Cable", "Copper") => 10,
         "Heater" => 10,
     ),
     "IgnitionSystem" => Dict(
@@ -183,7 +172,7 @@ mk3 = Dict(
     ),
     "Trigger" => Dict(
         "Iron" => 40,
-        trans_concat("Wire", "Diamond") => 10,
+        trans("Wire", "Diamond") => 10,
         "Circuit" => 5,
         "ElectricBoard" => 8,
     ),
@@ -204,36 +193,36 @@ rmk1 = Dict(
         "PCircuit" => 2,
         "UCircuit" => 2,
         "Circuit" => 3,
-        trans_concat("Cable", "Gold") => 3,
+        trans("Cable", "Gold") => 3,
         "Processor" => 3,
     ),
     "PCell" => Dict(
         "Plutonium" => 4,
         "SolarCell" => 4,
-        trans_concat("Liquid", "Diamond") => 10,
-        trans_concat("Cable", "Gold") => 4,
-        trans_concat("Cable", "Copper") => 4,
+        trans("Liquid", "Diamond") => 10,
+        trans("Cable", "Gold") => 4,
+        trans("Cable", "Copper") => 4,
     ),
     "PCircuit" => Dict(
         "Plutonium" => 5,
         "Circuit" => 5,
         "Copper" => 5,
-        trans_concat("Cable", "Gold") => 3,
-        trans_concat("Wire", "Diamond") => 3,
+        trans("Cable", "Gold") => 3,
+        trans("Wire", "Diamond") => 3,
     ),
     "UCell" => Dict(
         "Uranium" => 4,
         "SolarCell" => 4,
-        trans_concat("Liquid", "Diamond") => 10,
-        trans_concat("Cable", "Gold") => 4,
-        trans_concat("Cable", "Copper") => 4,
+        trans("Liquid", "Diamond") => 10,
+        trans("Cable", "Gold") => 4,
+        trans("Cable", "Copper") => 4,
     ),
     "UCircuit" => Dict(
         "Uranium" => 5,
         "Circuit" => 5,
         "Copper" => 5,
-        trans_concat("Cable", "Gold") => 3,
-        trans_concat("Wire", "Diamond") => 3,
+        trans("Cable", "Gold") => 3,
+        trans("Wire", "Diamond") => 3,
     ),
 )
 
@@ -243,8 +232,8 @@ rmk2 = Dict(
         "PCell" => 1,
         "UCell" => 1,
         "Processor" => 10,
-        trans_concat("Cable", "Diamond") => 4,
-        trans_concat("Cable", "Gold") => 4,
+        trans("Cable", "Diamond") => 4,
+        trans("Cable", "Gold") => 4,
     ),
     "NProcessor" => Dict(
         "NCircuit" => 1,
@@ -252,7 +241,7 @@ rmk2 = Dict(
         "UCircuit" => 1,
         "AIProcessor" => 1,
         "Processor" => 5,
-        trans_concat("Plate", "Diamond") => 10,
+        trans("Plate", "Diamond") => 10,
     ),
     "AtomicBomb" => Dict(
         "NProcessor" => 1,
@@ -271,6 +260,3 @@ rmk2 = Dict(
         "NCircuit" => 1,
     ),
 )
-
-const radioactive_makers = union(collect(keys(rmk1)), collect(keys(rmk2)))
-isradioactive(string) = in(string, radioactive_makers)

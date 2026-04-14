@@ -1,20 +1,11 @@
 ## Needs Data.jl, depends on it.
 export datatree, autocomplete_keys
 
-const RECIPES = [
-    recipes_transformers(),
-    mk1, mk2, mk3,
-    rmk1, rmk2,
-]
-
 allkeys() = mapreduce(mk -> collect(keys(mk)), vcat, RECIPES)
 function autocomplete_keys()
     key_strings = unique!(allkeys())
     return (; zip(Symbol.(key_strings), key_strings)...)
 end
-
-# const MATERIAL_COUNT = length(raw_materials)
-const MATERIAL_COUNT = 7
 
 """
     datatree()
@@ -67,6 +58,8 @@ empty_tree() = MetaGraph(
 )
 
 # tier 0; amount none
+# const MATERIAL_COUNT = length(raw_materials)
+# const MATERIAL_COUNT = 7
 # init_data(::Type{T}=Int) where T = ntuple(_ -> zero(T), Val(MATERIAL_COUNT))
 init_data(::Type{T}=Int) where T = nothing
 function build_skeletontree!(tree, maker_recipes)

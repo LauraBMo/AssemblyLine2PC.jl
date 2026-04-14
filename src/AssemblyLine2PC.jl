@@ -1,39 +1,69 @@
 module AssemblyLine2PC
 
+using Graphs, MetaGraphsNext
+
+using UnPack
+using MinerNumbers
+MinerNumbers.set_round!(2)
+
+
+using Printf
+using PrettyTables
+
 include("Utils.jl")
 
-using Graphs, MetaGraphsNext
-using MinerNumbers
-using UnPack
+"""
+    raw_materials
+
+String ordered vector of raw resources that anchor all cost tuples produced by
+AssemblyLine2PC.jl.
+"""
+const RAWS = ["Gold", "Diamond", "Iron", "Copper", "Aluminum"]
+# const raws_radio = ["Uranium", "Plutonium"]
 
 include("Data.jl")
+
+const RECIPES = [
+    # rawrecipes(), ## not a good idea
+    transrecipes(),
+    mk1, mk2, mk3,
+    rmk1, rmk2,
+]
+
 include("BuildData.jl")
-include("ViewGraph.jl")
-include("Recipe.jl")
 include("Costs.jl")
 
-# include("Distribution.jl")
+include("TableUtils.jl")
+include("ViewGraph.jl")
 
-export cost, total_material, nminers, topspeed
+export raw_cost, nstarters, topspeed
 
-export vertex_costs!, raw_materials, vertex_raw_costs, build_skeletontree
+export vertex_costs!, raw_materials, raw_costs, build_skeletontree
 
 export full_recipe
 
 ## The actual time per unit at max update is 0.217391300, which is round to 0.2.
 ## So, each started produces 4.6 units per second; and not 5 (as I thought).
 ## How many units per second an started produce:
-const PRODUCTION_SPEED = 4.6
+# const PRODUCTION_SPEED = 4.6
 
+"""
+Dimensionless factor to account for a small delay on in-game speeds productions.   
+Every time the game says `1` units per `s` sec; in fact, it does mean `GAME_FACTOR = 0.92` units per `s` sec.
+For example, starters at max the game says 1u per 0.2sec (which should be 5u/sec); but they produce at 0.92/0.2=4.6u/sec.
+"""
+const GAME_FACTOR = 0.92
 
-include("Prices.jl")
+include("Recipe.jl")
+# include("Distribution.jl")
 
-const PRICES = Dict(pairs(pmk1)...,
-                    pairs(pmk2)...,
-                    pairs(pmk3)...,
-                    pairs(prmk1)...,
-                    pairs(prmk2)...,
-                    )
+# include("Prices.jl")
+# const PRICES = Dict(pairs(pmk1)...,
+#                     pairs(pmk2)...,
+#                     pairs(pmk3)...,
+#                     pairs(prmk1)...,
+#                     pairs(prmk2)...,
+#                     )
 
 # function tree_time_cost(name, speed=1.0, data=get_data())
 #     item = data[name]
