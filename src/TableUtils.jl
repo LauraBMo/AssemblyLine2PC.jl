@@ -3,7 +3,22 @@ findalltransraw(table) = findall(istransraw, first.(eachrow(table)))
 findallradioactive(table) = findall(isradio, first.(eachrow(table)))
 
 miner_formatter(columns) = (v, i, j) -> (in(j, columns) ? nMiners(v) : v)
+int_formatter(rows) = (v, i, j) -> (in(i, rows) ? Int(v) : v)
 # miner_formatter(columns) = (v, i, j) -> (in(j, columns) ? nMiners(v) : v)
+
+function __summary(j, data, title, fun)
+    if j == 1
+        title
+    elseif j == 4
+        nMiners(sum(fun, data[:, j]))
+    else
+        sum(fun, data[:, j])
+    end
+end
+my_summary() = [
+    (data, j) -> __summary(j, data, "Sum:", x -> x),
+    (data, j) -> __summary(j, data, "Sum Ceil:", x -> ceil(Int, x)),
+]
 
 function highlighters_recipetable(table)
     _ord = sortperm(map(row -> sum(row[3:end]), eachrow(table)))

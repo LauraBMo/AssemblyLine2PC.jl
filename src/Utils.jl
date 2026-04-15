@@ -17,20 +17,6 @@ function permute_to_front(A::AbstractArray, I::AbstractVector{Int}, dim=1)
     return A[idx...]
 end
 
-function __summary(j, data, string, fun)
-    if j == 1
-        string
-    elseif j == 2
-        sum(fun, data[:, j])
-    else
-        sum(fun, data[:, j]./(5*GAME_FACTOR))
-    end
-end
-my_summary() = [
-    (data, j) -> __summary(j, data, "Totals:", x -> x),
-    (data, j) -> __summary(j, data, "Ceil Sum:", ceil),
-]
-
 function outneighbor_label(G, item, i)
     code = code_for(G, item)
     codes = outneighbors(G, code)
@@ -73,9 +59,10 @@ end
 init_approx(L, d) = fix_approx!([round(Int, x * d) for x in L], d)
 function fix_approx!(approx, d)
     total = sum(approx; init = 0)
-    if total > d
+    while total > d
         _, i = findmax(approx)
-        approx[i] -= (total - d)
+        approx[i] -= 1
+        total -= 1
     end
     return approx
 end
@@ -90,14 +77,14 @@ function find_approx(L, d; range = 1)
     out = approx
 
     # map_zero_sum_tuples(n, range) do I
-    for I in factors(range, length(L))
-        new_approx = approx .+ I
-        new_error = error_approx(L, d, new_approx)
-        if new_error < old_error
-            out = new_approx
-            old_error = new_error
-        end
-    end
+    # for I in factors(range, length(L))
+    #     new_approx = approx .+ I
+    #     new_error = error_approx(L, d, new_approx)
+    #     if new_error < old_error
+    #         out = new_approx
+    #         old_error = new_error
+    #     end
+    # end
     return out, old_error
 end
 

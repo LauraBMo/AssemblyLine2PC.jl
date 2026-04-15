@@ -4,7 +4,7 @@ using Graphs, MetaGraphsNext
 
 using UnPack
 using MinerNumbers
-MinerNumbers.set_round!(2)
+# MinerNumbers.set_round!(2)
 
 
 using Printf

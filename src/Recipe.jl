@@ -102,7 +102,9 @@ function (R::Recipe)(item::String, costs::AbstractVector;
         title *= @sprintf " starters: %i" nstarters
         title *= @sprintf " %ix: %i+%i/%i" n divrem(nstarters, n)... n
     else
-        title *= @sprintf " makers: %i" ceil(Int, speed/GAME_FACTOR)
+        nmachines = ceil(Int, speed/GAME_FACTOR)
+        title *= @sprintf " makers: %i," nmachines
+        title *= @sprintf " %ix: %i+%i/%i" n divrem(nmachines, n)... n
     end
     title *= ") to produce:"
     subtitle = @sprintf "-- Goal %s at (%0.2f[u/s])\n" root(R) target(R)
@@ -113,7 +115,7 @@ function (R::Recipe)(item::String, costs::AbstractVector;
     if length(costs) == 1
         @printf "%s\n" title
         @printf "%s" subtitle
-        viewgraph(graph(R))(item; speed=speed, npacks = n)
+        viewgraph(graph(R))(item; speed=speed, npack = n)
         return nothing
     end
     # _data = permutedims(hcat(collect(amounts), speeds_sources))
@@ -152,11 +154,12 @@ function (R::Recipe)(item::String, costs::AbstractVector;
         _data;
         column_labels=join.(enumerate(names), [spearator]),
         row_labels=["Parts", "Get prop.", "To apx.", "Produce", "Makers"],
-        formatters=[# (v, i, j) -> (i == 1 ? Int(v) : v)
+        formatters=[
+            int_formatter([1,5]),
                     ],
         kwagrs...,
         show_row_number_column=false,
-        source_notes="Splitting for $(item): $(sum(amounts)) parts",
+        source_notes="Splitting for $(item): $(Int(sum(amounts))) parts",
         title=title,
         subtitle=subtitle,
         )
