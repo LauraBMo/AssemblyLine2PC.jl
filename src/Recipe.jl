@@ -48,7 +48,7 @@ function recipe(R::Recipe, item::String=R.root, speed=R.speed, deep="", G=R.G)
     return out
 end
 
-function (R::Recipe)(item; full=true, group=nothing)
+function (R::Recipe)(item; full=true, group=nothing, exact=false, other=true)
     costs = vertex_costs(R, item)
     if item == R.root
         costs = Dict(item => 1)
@@ -56,15 +56,22 @@ function (R::Recipe)(item; full=true, group=nothing)
     # @show costs
     # @show sum(values(costs))
 
-    names, speeds = keys(costs), values(costs)
-    total = sum(speeds; init=0)
-    # d, frac = approximate_with_fractions(speeds ./ total)
+    names, vals = keys(costs), values(costs)
+    total = sum(vals; init=0)
+    if exact
+        g = gcd(collect(vals)...)
+        speeds = vals./g
+    else
+        d, speeds = approximate_with_fractions(vals ./ total)
+    end
     speeds_sources = [R.speed * vertex_cost(R, it) for it in names]
 
     title = @sprintf "Needs %s(%0.2f[u/s]" item R.speed * total
     if israwmaterial(item)
         # title *= @sprintf " miners: %0.2f" total/PRODUCTION_SPEED
-        title *= @sprintf " miners: %i" ceil(Int, R.speed * total / PRODUCTION_SPEED)
+        title *= @sprintf " starters: %i" ceil(Int, R.speed * total / PRODUCTION_SPEED)
+    else
+        title *= @sprintf " makers: %i" ceil(Int, R.speed * total / 0.92)
     end
     title *= ") to produce:"
     subtitle = @sprintf "-- Goal %s at (%0.2f[u/s])\n" R.root R.speed
@@ -73,13 +80,20 @@ function (R::Recipe)(item; full=true, group=nothing)
         @printf "%s >> %s(%0.2f[u/s]).\n" title first(names) R.speed * first(speeds)
         @printf "%s" subtitle
     else
-        _data = permutedims(hcat(collect(speeds), speeds_sources))
+        _data = permutedims(hcat(speeds, speeds./d, vals./total, speeds_sources, ceil.([Int], speeds_sources/0.92)))
+
+        # _data = permutedims(hcat(collect(speeds), speeds_sources))
+        # @show error_approx(vals./total, d, speeds)
         kwagrs = kwargs_default()
         if !isnothing(group)
-            nn = length(group)
-            _data = permute_to_front(_data, group, 2)
+            _togroup = group
+            if other
+                _togroup = [i for i in 1:(length(speeds)) if !(i in group)]
+            end
+            nn = length(_togroup)
+            _data = permute_to_front(_data, _togroup, 2)
             _labels=join.(enumerate(names), ["."])
-            _labels = permute_to_front(_labels, group)
+            _labels = permute_to_front(_labels, _togroup)
 
             _data[1, 1] = sum(_data[1, 1:nn])
             # _data[1, 2:nn] .= 0.0
@@ -92,12 +106,13 @@ function (R::Recipe)(item; full=true, group=nothing)
                       formatters=[(v, i, j) -> (i == 1 ? Int(v) : v),
                                   (v, i, j) -> ((i == 1 && j in 2:nn) ? "_" : v),
                                   ],
-            )
+                      )
         end
         result = pretty_table(
             _data;
             column_labels=join.(enumerate(names), ["."]),
-            formatters=[(v, i, j) -> (i == 1 ? Int(v) : v)],
+            row_labels=["Parts", "Get prop.", "To apx.", "Produce", "Makers"],
+            formatters=[(v, i, j) -> ((i == 1) || (i == 5) ? Int(v) : v)],
             kwagrs...,
             show_row_number_column=false,
             source_notes="Splitting for $(item): $(sum(speeds)) parts",
