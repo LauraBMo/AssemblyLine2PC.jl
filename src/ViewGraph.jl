@@ -55,25 +55,25 @@ end
 #     print(Crayon(foreground=:light_blue, bold=true), summary)
 # end
 
-function (VG::ViewGraph)(root::String, path...; speed=1.0, miners=nothing, npacks=5)
+function (VG::ViewGraph)(root::String, path...; speed=1.0, miners=nothing, npack=5)
     G = graph(VG)
     if !(isnothing(miners))
         speed = topspeed(G, root, miners)
     end
     item, item_speed, header = showrecipe(root, speed, G, path)
-    table, notes = recipe_table(item, item_speed, npacks, G)
+    table, notes = recipe_table(item, item_speed, npack, G)
 
     I = findalltransraw(table)
     if isempty(I)
         pretty_table(table;
-                     kwargs_recipetable(table, header, npacks)...,
+                     kwargs_recipetable(table, header, npack)...,
                      source_notes=notes)
     elseif length(I) == size(table, 1)
         pretty_table(build_transraw_table(table[I, :]);
                      kwargs_transrawtable()...,
                      source_notes=notes)
     else
-        pretty_table(table; kwargs_recipetable(table, header, npacks)...)
+        pretty_table(table; kwargs_recipetable(table, header, npack)...)
         pretty_table(build_transraw_table(table[I, :]);
                      kwargs_transrawtable()...,
                      source_notes=notes)

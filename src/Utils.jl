@@ -68,39 +68,57 @@ function vertex_total_cost(G, v, cost = zero(Int))
     return cost
 end
 
-# function find_bestapprox(L, d; kwargs...)
-#     ## We assume sum(L) == 1 
-#     approx = [ceil(Int, x * d; kwargs...) for x in L]
-#     total = sum(approx; init = 0)
-#     if total > d
-#         _, i = findmax(approx)
-#         approx[i] -= (total - d)
-#     end
-#     return approx
-# end
 
-# function total_error_for_denominator(L, d; kwargs...)
-#     approx = find_bestapprox(L, d; kwargs...)
-#     return sum(abs.(L .- (approx./d)); init = 0)
-# end
+## We assume sum(L) == 1 
+init_approx(L, d) = fix_approx!([round(Int, x * d) for x in L], d)
+function fix_approx!(approx, d)
+    total = sum(approx; init = 0)
+    if total > d
+        _, i = findmax(approx)
+        approx[i] -= (total - d)
+    end
+    return approx
+end
 
-# """
-#     approximate_with_fractions(L, denominators; kwargs...)
+const IT = Iterators
+factors(r, n) = IT.filter(I -> sum(I)==0, IT.product(fill(-r:r, n)...))
 
-# Create rational approximations for list `L` using the best denominator from `denominators`.
+function find_approx(L, d; range = 1)
+    approx = init_approx(L, d)
 
-# Additional keyword arguments are passed to `ceil` in `find_bestapprox`.
-# """
-# function approximate_with_fractions(L, denominators = collect(1:100);
-#                                     error = total_error_for_denominator,
-#                                     kwargs...)
-#     # Find the optimal denominator
-#     _, i = findmin(d -> error(L, d; kwargs...), denominators)
-#     best_d = denominators[i]
-    
-#     # Create fractions using the best denominator
-#     best_d, find_bestapprox(L, best_d; kwargs...)
-# end
+    old_error = error_approx(L, d, approx)
+    out = approx
+
+    # map_zero_sum_tuples(n, range) do I
+    for I in factors(range, length(L))
+        new_approx = approx .+ I
+        new_error = error_approx(L, d, new_approx)
+        if new_error < old_error
+            out = new_approx
+            old_error = new_error
+        end
+    end
+    return out, old_error
+end
+
+error_approx(L, d, approx) = sum(abs.(L .- (approx./d)); init = 0)
+
+"""
+    approximate_with_fractions(L, denominators; kwargs...)
+
+Create rational approximations for list `L` using the best denominator from `denominators`.
+
+Additional keyword arguments are passed to `ceil` in `find_bestapprox`.
+"""
+function approximate_with_fractions(L, denominators = length(L):100; kwargs...)
+    candidates = find_approx.([L], denominators)
+    # Find the optimal denominator
+    _, i = findmin(C -> last(C), candidates)
+
+    best_d = denominators[i]
+    approx = first(candidates[i])
+    return best_d, approx
+end
 
 # function approximate_with_fractions_splited(split, L, denominators = collect(1:100);
 #                                             error = total_error_for_denominator,

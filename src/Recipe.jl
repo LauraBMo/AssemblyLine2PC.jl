@@ -49,7 +49,13 @@ function recipe(R::Recipe, item::String=root(R), amount=target(R), deep="", G=gr
     return out
 end
 
-function (R::Recipe)(item::String; full=true, group=nothing, apart=nothing, npack = 5, n = npack)
+function (R::Recipe)(item::String;
+                     full=true, # Show Graph View
+                     group=nothing, other=true,
+                     apart=nothing,
+                     exact=false,
+                     npack = 5, n = npack,
+                     )
     costs = collect(vertex_costs(R, item))
     sort!(costs; by=last, rev=true)
     # @show costs
@@ -66,11 +72,25 @@ end
 
 (R::Recipe)(; full=true, group=nothing) = (R).(RAWS; full=full, group=group)
 
-function (R::Recipe)(item::String, costs::AbstractVector; full=true, group=nothing, npack = 5, n = npack)
+function (R::Recipe)(item::String, costs::AbstractVector;
+                     full=true, # Show Graph View
+                     group=nothing, other=true,
+                     apart=nothing,
+                     exact=false,
+                     npack = 5, n = npack,
+                     )
+                     # full=true, group=nothing, npack = 5, n = npack)
     names, amounts = first.(costs), last.(costs)
     amount = sum(amounts; init=0) # [item]/[R.root] ## = vertex_cost(R, item) - apart
     # d, frac = approximate_with_fractions(speeds ./ total)
     speeds_sources = [target(R) * vertex_cost(R, it) for it in names]
+
+    if exact
+        D = gcd(amounts)
+        splittings = amounts ./ D
+    else
+        d, splittings = approximate_with_fractions(amounts ./ amount)
+    end
 
     ## See `vertex_costs` comment.
     ## R, amount, item, costs, names
@@ -96,13 +116,24 @@ function (R::Recipe)(item::String, costs::AbstractVector; full=true, group=nothi
         viewgraph(graph(R))(item; speed=speed, npacks = n)
         return nothing
     end
-    _data = permutedims(hcat(collect(amounts), speeds_sources))
+    # _data = permutedims(hcat(collect(amounts), speeds_sources))
+    _data = permutedims(hcat(splittings,
+                             splittings./d,
+                             amounts./amount,
+                             speeds_sources,
+                             ceil.([Int], speeds_sources/0.92)
+                             ))
     kwagrs = kwargs_default()
+    spearator = "."
     if !isnothing(group)
-        nn = length(group)
-        _data = permute_to_front(_data, group, 2)
-        _labels=join.(enumerate(names), ["."])
-        _labels = permute_to_front(_labels, group)
+        _togroup = group
+        if other
+            _togroup = [i for i in 1:(length(speeds)) if !(i in group)]
+        end
+        nn = length(_togroup)
+        _data = permute_to_front(_data, _togroup, 2)
+        _labels=join.(enumerate(names), [spearator])
+        _labels = permute_to_front(_labels, _togroup)
         
         _data[1, 1] = sum(_data[1, 1:nn])
         # _data[1, 2:nn] .= 0.0
@@ -119,7 +150,8 @@ function (R::Recipe)(item::String, costs::AbstractVector; full=true, group=nothi
     end
     result = pretty_table(
         _data;
-        column_labels=join.(enumerate(names), ["."]),
+        column_labels=join.(enumerate(names), [spearator]),
+        row_labels=["Parts", "Get prop.", "To apx.", "Produce", "Makers"],
         formatters=[# (v, i, j) -> (i == 1 ? Int(v) : v)
                     ],
         kwagrs...,
@@ -129,9 +161,8 @@ function (R::Recipe)(item::String, costs::AbstractVector; full=true, group=nothi
         subtitle=subtitle,
         )
     result
-    # if full && !istransraw(item)
-    #     viewgraph(graph(R))(item; speed=speed, npacks = n)
-    # end
-    viewgraph(graph(R))(item; speed=speed, npacks = n)
+    if full
+        viewgraph(graph(R))(item; speed = speed, npack = n)
+    end
 end
 
