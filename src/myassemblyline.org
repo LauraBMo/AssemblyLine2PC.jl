@@ -32,6 +32,66 @@ viewg = AL2.viewgraph()
 viewg(kk.Circuit; miners = N)
 
 #+end_src
+* Building AIRBomber
+** DONE Iron tree
+#+begin_src julia
+curr("Iron"; apart=[6,7], group=[1])
+curr("Iron"; apart=[6,7], group=[1,4,5])
+curr("Iron"; apart=[6,7],)
+
+curr(kk.var"Wire:Iron")
+## Needs Wire:Iron(126.98[u/s] makers: 139, 5x: 27+4/5) to produce: >> Heater(63.49[u/s]).
+## Just missing "Trigger", with 2 makers.
+
+#+end_src
+** Aluminium tree
+
+#+begin_src julia
+curr("Aluminum"; apart=[7], group=[6])
+curr("Aluminum"; apart=[7], group=[6,2,5])
+## Math for splitting ServerRack + Liquid:Aluminum
+n=6; 2//5+1//4*(n//(n+9))
+# 1/2
+
+curr("Aluminum"; apart=[7], group=[6,2,5,1])
+
+#+end_src
+** Circuit
+#+begin_src julia
+curr(kk.Circuit; group=[3,8], other=false)
+curr(kk.Circuit; group=[3,8], other=true)
+
+
+#+end_src
+** Battery
+#+begin_src julia
+curr(kk.Battery; group=[1]) # 14//5 
+curr(kk.Battery; group=[1,2]) # 3//2
+## END
+
+#+end_src
+** Heat
+#+begin_src julia
+curr(kk.Heater; group=[2]) # 5 // 8
+
+#+end_src
+** DONE Electric Board
+#+begin_src julia
+curr(kk.ElectricBoard; group=[2]) # 6//19 
+curr(kk.ElectricBoard; group=[2,5]) 
+curr(kk.ElectricBoard; group=[2,5,1])
+curr(kk.ElectricBoard; ) 
+
+#+end_src
+
+** DONE Cable Gold
+#+begin_src julia
+curr(kk.var"Cable:Gold"; group=[1]) # 11//20
+
+#+end_src
+
+** DONE Cable Copper
+
 * Optimize ratios via graph
 
 #+begin_src julia

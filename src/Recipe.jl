@@ -50,27 +50,27 @@ function recipe(R::Recipe, item::String=root(R), amount=target(R), deep="", G=gr
 end
 
 function (R::Recipe)(item::String;
-                     full=true, # Show Graph View
-                     group=nothing, other=true,
+                     group=nothing,
                      apart=nothing,
-                     exact=false,
-                     npack = 5, n = npack,
+                     n=5,
+                     kwagrs...,
                      )
     costs = collect(vertex_costs(R, item))
     sort!(costs; by=last, rev=true)
+    ilabel = join.(enumerate(first.(costs)), ["."])
     # @show costs
     # @show sum(values(costs))
 
     if isnothing(apart)
-        R(item, costs; full=full, group=group, n = n)
+        R(item, costs; group=group, n=n, lbl=ilabel, kwagrs...)
     else
-        R(item, costs[∉(apart).(1:end)]; full=full, group=group, n = n)
+        R(item, costs[apart]; group=nothing, n=5, lbl=ilabel[apart], kwagrs...)
+        R(item, costs[∉(apart).(1:end)]; group=group, n=n, lbl=ilabel[∉(apart).(1:end)], kwagrs...)
         print("\n")
-        R(item, costs[apart]; full=full, group=nothing, n = 5)
     end
 end
 
-(R::Recipe)(; full=true, group=nothing) = (R).(RAWS; full=full, group=group)
+(R::Recipe)(; kwagrs...) = (R).(RAWS; kwargs...)
 
 function (R::Recipe)(item::String, costs::AbstractVector;
                      full=true, # Show Graph View
@@ -78,9 +78,10 @@ function (R::Recipe)(item::String, costs::AbstractVector;
                      apart=nothing,
                      exact=false,
                      npack = 5, n = npack,
+                     lbl = [],
                      )
-                     # full=true, group=nothing, npack = 5, n = npack)
     names, amounts = first.(costs), last.(costs)
+    # full=true, group=nothing, npack = 5, n = npack)
     amount = sum(amounts; init=0) # [item]/[R.root] ## = vertex_cost(R, item) - apart
     # d, frac = approximate_with_fractions(speeds ./ total)
     speeds_sources = [target(R) * vertex_cost(R, it) for it in names]
@@ -88,8 +89,10 @@ function (R::Recipe)(item::String, costs::AbstractVector;
     if exact
         D = gcd(amounts)
         splittings = amounts ./ D
+        notes = @sprintf "Splitting for %s: %i parts" item sum(splittings)
     else
         d, splittings = approximate_with_fractions(amounts ./ amount)
+        notes = @sprintf "Splitting for %s: %i parts" item d
     end
 
     ## See `vertex_costs` comment.
@@ -126,15 +129,14 @@ function (R::Recipe)(item::String, costs::AbstractVector;
                              ceil.([Int], speeds_sources/0.92)
                              ))
     kwagrs = kwargs_default()
-    spearator = "."
     if !isnothing(group)
         _togroup = group
         if other
-            _togroup = [i for i in 1:(length(speeds)) if !(i in group)]
+            _togroup = [i for i in 1:(length(amounts)) if !(i in group)]
         end
         nn = length(_togroup)
         _data = permute_to_front(_data, _togroup, 2)
-        _labels=join.(enumerate(names), [spearator])
+        _labels = lbl
         _labels = permute_to_front(_labels, _togroup)
         
         _data[1, 1] = sum(_data[1, 1:nn])
@@ -145,24 +147,24 @@ function (R::Recipe)(item::String, costs::AbstractVector;
         kwagrs = (kwagrs...,
                   column_labels=[[MultiColumn(nn, l1), _labels[(nn+1):end]...]],
                   merge_column_label_cells=:auto,
-                  formatters=[# (v, i, j) -> (i == 1 ? Int(v) : v),
+                  formatters=[int_formatter([1, 5]),
                               (v, i, j) -> ((i == 1 && j in 2:nn) ? "_" : v),
                               ],
                   )
     end
     result = pretty_table(
         _data;
-        column_labels=join.(enumerate(names), [spearator]),
-        row_labels=["Parts", "Get prop.", "To apx.", "Produce", "Makers"],
+        column_labels=lbl,
+        row_labels=["Parts", "Getting", "Goal", "To Produce", "Machines"],
         formatters=[
-            int_formatter([1,5]),
-                    ],
+            int_formatter([1, 5]),
+        ],
         kwagrs...,
         show_row_number_column=false,
-        source_notes="Splitting for $(item): $(Int(sum(amounts))) parts",
+        source_notes=notes,
         title=title,
         subtitle=subtitle,
-        )
+    )
     result
     if full
         viewgraph(graph(R))(item; speed = speed, npack = n)
